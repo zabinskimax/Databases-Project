@@ -152,15 +152,15 @@ def main_menu_screen(root):
     }
 
     ingredients = {
-        "Margherita": "Tomato sauce, mozzarella cheese, basil",
-        "Pepperoni": "Tomato sauce, mozzarella cheese, pepperoni",
-        "Vegetarian": "Tomato sauce, mozzarella cheese, assorted vegetables",
-        "Coke": "Carbonated water, sugar, caffeine",
-        "Pepsi": "Carbonated water, sugar, caffeine, flavoring",
+        "Margherita":"Tomato sauce" "\n" "Mozzarella cheese" "\n" "Basil",
+        "Pepperoni": "Tomato sauce" "\n" "Mozzarella cheese" "\n" "Pepperoni",
+        "Vegetarian": "Tomato sauce" "\n" "Mozzarella cheese" "\n" "Assorted vegetables",
+        "Coke": "Carbonated water" "\n" "Sugar" "\n" "Caffeine",
+        "Pepsi": "Carbonated water" "\n" "Sugar" "\n" "Caffeine" "\n" "Flavoring",
         "Water": "Filtered water",
-        "Cake": "Flour, sugar, eggs, butter, baking powder",
-        "Ice Cream": "Milk, sugar, cream, flavoring",
-        "Brownie": "Flour, sugar, cocoa powder, butter, eggs"
+        "Cake": "Flour" "\n" "Sugar" "\n" "Eggs" "\n" "Butter" "\n" "Baking powder",
+        "Ice Cream": "Milk" "\n" "Sugar" "\n" "Cream" "\n" "Flavoring",
+        "Brownie": "Flour" "\n" "Sugar" "\n" "Cocoa powder" "\n" "Butter" "\n" "Eggs"
     }
 
     def on_category_selected(event, food_type_combobox, size_combobox):
@@ -184,7 +184,7 @@ def main_menu_screen(root):
 
     def show_info(food_type):
         info = ingredients.get(food_type, "No information available.")
-        messagebox.showinfo("Ingredients", f"{food_type}: {info}")
+        messagebox.showinfo("Ingredients", f"{info}")
 
     def add_combobox():
         # Create a new frame to hold the comboboxes for each order
