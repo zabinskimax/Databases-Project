@@ -101,6 +101,7 @@ def create_accounts_screen(root):
             password_entry.get(),
             number_of_orders_entry.get()
         )
+        main_menu_screen(root)
 
     create_account_button = tk.Button(root, text="Create Account", command=on_create_account)
     create_account_button.pack(pady=10)

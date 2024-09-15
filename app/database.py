@@ -2,6 +2,8 @@ from sqlalchemy import create_engine, text
 import re
 from datetime import datetime
 
+from app.password_hashing import hash_password, verify_password
+
 # Define your MySQL database credentials
 username = 'admin'
 password = 'ktGl4r&<,bNY'
@@ -17,21 +19,24 @@ engine = create_engine(db_url)
 def log_in(email, password):
     # Construct the SQL query to check for the user
     query = text('''
-            SELECT * FROM Customer WHERE email = :email AND password = :password
+            SELECT * FROM Customer WHERE email = :email
         ''')
 
-    # Execute the query with the provided email and password
     with engine.connect() as connection:
-        result = connection.execute(query, {'email': email, 'password': password})
+        result = connection.execute(query, {'email': email})
         user = result.fetchone()
 
-
-    if user:
-            print(f"User {user[0]} logged in successfully!")
-    else:
+    if not user:
         # User not found, login failed
         print("Invalid email or password.")
+        return
 
+    # Verify password using bcrypt
+    if not verify_password(user.Password, password):
+        print("Invalid email or password.")
+        return
+        # Login successful
+    print(f"User {user} logged in successfully!")
 
 def create_account(name, gender, birthdate, phone, address, email, password, number_of_orders):
     # Basic validation
@@ -65,9 +70,13 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
     if exists:
         print("Email address already exists. Please choose a different email.")
         return
+
+    hashed_password = hash_password(password)
+    print(hashed_password)
+
     insert_statement = text('''
         INSERT INTO Customer (Name, Gender, Birthdate, PhoneNumber, Address, Email, Password, NumberOfOrders) VALUES (
-            :name, :gender, :birthdate, :phone, :address, :email, :password, :number_of_orders
+            :name, :gender, :birthdate, :phone, :address, :email, :hashed_password, :number_of_orders
         )
     ''')
 
@@ -78,7 +87,7 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
         'phone': phone,
         'address': address,
         'email': email,
-        'password': password,
+        'hashed_password': hashed_password,
         'number_of_orders': number_of_orders
     }
 
