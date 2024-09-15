@@ -2,7 +2,9 @@ from sqlalchemy import create_engine, text
 import re
 from datetime import datetime
 
-from app.password_hashing import verify_password
+from app.password_hashing import hash_password, verify_password
+
+from datetime import datetime, timedelta
 
 # Define your MySQL database credentials
 username = 'admin'
@@ -15,6 +17,7 @@ database = 'boneless_pizza'
 db_url = f'mysql+mysqlconnector://{username}:{password}@{host}:{port}/{database}'
 engine = create_engine(db_url)
 
+customer_id = None
 
 def log_in(email, password):
     # Construct the SQL query to check for the user
@@ -37,6 +40,7 @@ def log_in(email, password):
         return
         # Login successful
     print(f"User {user} logged in successfully!")
+    customer_id = user[0]
     return True
 
 def create_account(name, gender, birthdate, phone, address, email, password, number_of_orders):
@@ -71,9 +75,13 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
     if exists:
         print("Email address already exists. Please choose a different email.")
         return
+
+    hashed_password = hash_password(password)
+    print(hashed_password)
+
     insert_statement = text('''
         INSERT INTO Customer (Name, Gender, Birthdate, PhoneNumber, Address, Email, Password, NumberOfOrders) VALUES (
-            :name, :gender, :birthdate, :phone, :address, :email, :password, :number_of_orders
+            :name, :gender, :birthdate, :phone, :address, :email, :hashed_password, :number_of_orders
         )
     ''')
 
@@ -84,7 +92,7 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
         'phone': phone,
         'address': address,
         'email': email,
-        'password': password,
+        'hashed_password': hashed_password,
         'number_of_orders': number_of_orders
     }
 
@@ -93,6 +101,44 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
         connection.commit()
         print(f'Customer {name} added successfully.')
 
+
+
+def take_order(take_away, total_amount, order_status, discount, payed):
+    query = text('''
+        INSERT INTO orders (CustomerID, TakeAway, TotalAmount, OrderStatus, Discount, Payed)
+        VALUES (:customer_id, :take_away, :total_amount, :order_status, :discount, :payed)
+    ''')
+
+    with engine.connect() as connection:
+        connection.execute(query, customer_id=customer_id, take_away=take_away, total_amount=total_amount, order_status=order_status, discount=discount, payed=payed)
+
+
+def assign_delivery(designated_area):
+    # Calculate half an hour ago
+    half_hour_ago = datetime.now() - timedelta(minutes=30)
+
+    query = text('''
+            SELECT * FROM DeliveryPerson
+            WHERE designated_area = :designated_area
+            AND last_delivery_start_time < :half_hour_ago
+            ORDER BY last_delivery_start_time ASC
+            LIMIT 1
+        ''')
+
+    with engine.connect() as connection:
+        result = connection.execute(query, designated_area=designated_area, half_hour_ago=half_hour_ago)
+        delivery_person = result.fetchone()
+
+        if delivery_person:
+            update_query = text('''
+                    UPDATE DeliveryPerson
+                    SET last_delivery_start_time = :now
+                    WHERE id = :delivery_person_id
+                ''')
+
+            connection.execute(update_query, now=datetime.now(), delivery_person_id=delivery_person.id)
+
+        return delivery_person
 
 def take_order():
     print('take order')
