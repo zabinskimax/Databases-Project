@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, text
 import re
 from datetime import datetime
 
-from app.password_hashing import hash_password, verify_password
+from app.password_hashing import verify_password
 
 # Define your MySQL database credentials
 username = 'admin'
@@ -37,6 +37,7 @@ def log_in(email, password):
         return
         # Login successful
     print(f"User {user} logged in successfully!")
+    return True
 
 def create_account(name, gender, birthdate, phone, address, email, password, number_of_orders):
     # Basic validation
@@ -70,13 +71,9 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
     if exists:
         print("Email address already exists. Please choose a different email.")
         return
-
-    hashed_password = hash_password(password)
-    print(hashed_password)
-
     insert_statement = text('''
         INSERT INTO Customer (Name, Gender, Birthdate, PhoneNumber, Address, Email, Password, NumberOfOrders) VALUES (
-            :name, :gender, :birthdate, :phone, :address, :email, :hashed_password, :number_of_orders
+            :name, :gender, :birthdate, :phone, :address, :email, :password, :number_of_orders
         )
     ''')
 
@@ -87,7 +84,7 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
         'phone': phone,
         'address': address,
         'email': email,
-        'hashed_password': hashed_password,
+        'password': password,
         'number_of_orders': number_of_orders
     }
 
