@@ -136,10 +136,9 @@ def main_menu_screen(root):
     combobox_frame = tk.Frame(root)
     combobox_frame.pack(pady=10)
 
-    # Define a list of order options for the comboboxes
+    # Define order options and their details
     order_options = ["Pizza", "Drinks", "Desserts"]
 
-    # Define food types and sizes for each category
     food_types = {
         "Pizza": ["Margherita", "Pepperoni", "Vegetarian"],
         "Drinks": ["Coke", "Pepsi", "Water"],
@@ -150,6 +149,18 @@ def main_menu_screen(root):
         "Pizza": ["Small", "Medium", "Large"],
         "Drinks": ["Small", "Medium", "Large"],
         "Desserts": ["Single", "Double", "Family"]
+    }
+
+    ingredients = {
+        "Margherita": "Tomato sauce, mozzarella cheese, basil",
+        "Pepperoni": "Tomato sauce, mozzarella cheese, pepperoni",
+        "Vegetarian": "Tomato sauce, mozzarella cheese, assorted vegetables",
+        "Coke": "Carbonated water, sugar, caffeine",
+        "Pepsi": "Carbonated water, sugar, caffeine, flavoring",
+        "Water": "Filtered water",
+        "Cake": "Flour, sugar, eggs, butter, baking powder",
+        "Ice Cream": "Milk, sugar, cream, flavoring",
+        "Brownie": "Flour, sugar, cocoa powder, butter, eggs"
     }
 
     def on_category_selected(event, food_type_combobox, size_combobox):
@@ -170,6 +181,10 @@ def main_menu_screen(root):
         if category in size_options:
             size_combobox['values'] = size_options[category]
             size_combobox.set("Select size")
+
+    def show_info(food_type):
+        info = ingredients.get(food_type, "No information available.")
+        messagebox.showinfo("Ingredients", f"{food_type}: {info}")
 
     def add_combobox():
         # Create a new frame to hold the comboboxes for each order
@@ -194,6 +209,10 @@ def main_menu_screen(root):
         # Create a button to remove the current set of comboboxes
         remove_button = tk.Button(order_frame, text="Remove", command=lambda: remove_combobox(order_frame))
         remove_button.pack(side="left", padx=5)
+
+        # Create a button to show information about the selected food
+        info_button = tk.Button(order_frame, text="Info", command=lambda: show_info(food_type_combobox.get()))
+        info_button.pack(side="left", padx=5)
 
         # Bind the event for selecting a category
         category_combobox.bind(
@@ -225,10 +244,6 @@ def main_menu_screen(root):
     # Non-functional "Order" button
     order_button = tk.Button(button_frame, text="Order")
     order_button.pack(side="left", padx=5)
-
-def clear_screen(root):
-    for widget in root.winfo_children():
-        widget.pack_forget()
 
 def take_order_screen(root):
     clear_screen(root)
