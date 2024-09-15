@@ -39,11 +39,11 @@ def log_in_screen(root):
     label = tk.Label(root, text="Log In Screen", font=("Helvetica", 16))
     label.pack(pady=10)
 
-    username_label = tk.Label(root, text="Username:")
-    username_label.pack(pady=5)
+    email_label = tk.Label(root, text="Email:")
+    email_label.pack(pady=5)
 
-    username_entry = tk.Entry(root)
-    username_entry.pack(pady=5)
+    email_entry = tk.Entry(root)
+    email_entry.pack(pady=5)
 
     password_label = tk.Label(root, text="Password:")
     password_label.pack(pady=5)
@@ -51,7 +51,7 @@ def log_in_screen(root):
     password_entry = tk.Entry(root, show="*")
     password_entry.pack(pady=5)
 
-    login_button = tk.Button(root, text="Log In", command=log_in)
+    login_button = tk.Button(root, text="Log In", command=lambda: log_in(email_entry.get(), password_entry.get()))
     login_button.pack(pady=10)
 
     create_account_button = tk.Button(root, text="Create Account", command=lambda: create_account_button_action(root))

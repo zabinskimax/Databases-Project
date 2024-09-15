@@ -15,7 +15,22 @@ engine = create_engine(db_url)
 
 
 def log_in(email, password):
-    print("logging in")
+    # Construct the SQL query to check for the user
+    query = text('''
+            SELECT * FROM Customer WHERE email = :email AND password = :password
+        ''')
+
+    # Execute the query with the provided email and password
+    with engine.connect() as connection:
+        result = connection.execute(query, {'email': email, 'password': password})
+        user = result.fetchone()
+
+
+    if user:
+            print(f"User {user[0]} logged in successfully!")
+    else:
+        # User not found, login failed
+        print("Invalid email or password.")
 
 
 def create_account(name, gender, birthdate, phone, address, email, password, number_of_orders):
@@ -40,6 +55,16 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
         print("Number of orders must be an integer.")
         return
 
+    check_email_query = text('''
+            SELECT 1 FROM Customer WHERE email = :email
+        ''')
+    with engine.connect() as connection:
+        result = connection.execute(check_email_query, {'email': email})
+        exists = result.fetchone()
+
+    if exists:
+        print("Email address already exists. Please choose a different email.")
+        return
     insert_statement = text('''
         INSERT INTO Customer (Name, Gender, Birthdate, PhoneNumber, Address, Email, Password, NumberOfOrders) VALUES (
             :name, :gender, :birthdate, :phone, :address, :email, :password, :number_of_orders
