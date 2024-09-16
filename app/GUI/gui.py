@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import tkinter.ttk as ttk
 
-from app.database import log_in, create_account
+from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types
 
 
 def execute_gui():
@@ -140,9 +140,9 @@ def main_menu_screen(root):
     order_options = ["Pizza", "Drinks", "Desserts"]
 
     food_types = {
-        "Pizza": ["Margherita", "Pepperoni", "Vegetarian"],
-        "Drinks": ["Coke", "Pepsi", "Water"],
-        "Desserts": ["Cake", "Ice Cream", "Brownie"]
+        "Pizza": get_pizza_types(),
+        "Drinks": get_drink_types(),
+        "Desserts": get_desserts_types()
     }
 
     size_options = {
@@ -226,6 +226,7 @@ def main_menu_screen(root):
             lambda event: on_food_type_selected(event, category_combobox.get(), size_combobox)
         )
 
+
     def remove_combobox(frame):
         frame.destroy()
 
@@ -242,7 +243,7 @@ def main_menu_screen(root):
     back_button.pack(side="left", padx=5)
 
     # Non-functional "Order" button
-    order_button = tk.Button(button_frame, text="Order")
+    order_button = tk.Button(button_frame, text="Order", command=lambda: overview_screen(root))
     order_button.pack(side="left", padx=5)
 
 def take_order_screen(root):
@@ -255,6 +256,18 @@ def take_order_screen(root):
     username_label.pack(pady=5)
     username_label = tk.Label(root, text="Username:")
     username_label.pack(pady=5)
+
+def overview_screen(root):
+    clear_screen(root)
+
+    button_frame = tk.Frame(root)
+    button_frame.pack(pady=10, side="bottom")
+
+    order_button = tk.Button(button_frame, text="Order", command=lambda: overview_screen(root))
+    order_button.pack(side="left", padx=5)
+
+
+
 
 
 

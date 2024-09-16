@@ -140,6 +140,45 @@ def assign_delivery(designated_area):
 
         return delivery_person
 
+
+def get_pizza_info():
+    query = text('''
+                SELECT * FROM Pizza
+            ''')
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        return result.fetchall()
+
+def get_pizza_types():
+    pizzas= get_pizza_info()
+    pizza_types = {pizza[1] for pizza in pizzas}
+    return list(pizza_types)
+
+def get_drinks_info():
+    query = text('''
+                SELECT * FROM Drink
+            ''')
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        return result.fetchall()
+def get_drink_types():
+    drinks = get_drinks_info()
+    drink_types = {drinks[1] for drinks in drinks}
+    return list(drink_types)
+
+def get_desserts_info():
+    query = text('''
+                SELECT * FROM Dessert
+            ''')
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        return result.fetchall()
+
+def get_desserts_types():
+    desserts = get_desserts_info()
+    dessert_types = {desserts[1] for desserts in desserts}
+    return list(dessert_types)
+
 def take_order():
     print('take order')
 
