@@ -154,6 +154,11 @@ def get_pizza_types():
     pizza_types = {pizza[1] for pizza in pizzas}
     return list(pizza_types)
 
+def get_pizza_ingredients():
+    ingredients = get_pizza_info()
+    ingredient_types = {pizza[6] for pizza in ingredients}
+    return ingredient_types
+
 def get_drinks_info():
     query = text('''
                 SELECT * FROM Drink
@@ -161,6 +166,7 @@ def get_drinks_info():
     with engine.connect() as connection:
         result = connection.execute(query)
         return result.fetchall()
+
 def get_drink_types():
     drinks = get_drinks_info()
     drink_types = {drinks[1] for drinks in drinks}
@@ -179,8 +185,59 @@ def get_desserts_types():
     dessert_types = {desserts[1] for desserts in desserts}
     return list(dessert_types)
 
+
+def get_ingredients_info():
+    query = text('''SELECT * FROM Ingredient''')
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        return result.fetchall()
+
+def get_ingredients_types():
+    ingredients = get_ingredients_info()
+    ingredient_types = {ingredients[3] for ingredients in ingredients}
+    return list(ingredient_types)
+
+def get_ingredient_details(food_type, category):
+    if category == "Pizza":
+        # For pizzas, we need to join the Pizza and Ingredient tables
+        pizza_query = text('''
+            SELECT * FROM Pizza
+            WHERE Type = :food_type
+        ''')
+        with engine.connect() as connection:
+            with connection.begin() as transaction:
+                result = connection.execute(pizza_query, {'food_type': food_type})
+                pizza_ingredients = result.fetchone()
+
+                if pizza_ingredients:
+                    return pizza_ingredients[6]
+                else:
+                    return "No information available."
+
+
+def get_ingredient_from_ids(ids):
+    # If ids are passed as a string like "[1,2,3,34]", clean it up
+    if isinstance(ids, str):
+        # Use regex to extract all numbers from the string
+        ids = re.findall(r'\d+', ids)
+        ids = [int(i) for i in ids]  # Convert extracted numbers to integers
+
+    ingredients = []
+    for id1 in ids:
+        query = text('''
+                        SELECT * FROM Ingredient
+                        WHERE IngredientID = :id
+                        ''')
+        with engine.connect() as connection:
+            result = connection.execute(query, {'id': id1})
+            ingredient = result.fetchone()
+            if ingredient:
+                ingredients.append(ingredient[3])  # Assuming the name is at index 3
+    return ingredients
+
 def take_order():
     print('take order')
 
 def get_engine():
     return engine
+
