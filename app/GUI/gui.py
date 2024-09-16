@@ -2,7 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 import tkinter.ttk as ttk
 
-from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types
+from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types, \
+    get_ingredient_from_ids, get_ingredient_details
 
 
 def execute_gui():
@@ -182,9 +183,11 @@ def main_menu_screen(root):
             size_combobox['values'] = size_options[category]
             size_combobox.set("Select size")
 
-    def show_info(food_type):
-        info = ingredients.get(food_type, "No information available.")
-        messagebox.showinfo("Ingredients", f"{info}")
+    def show_info(food_type, category):
+            ingredient_ids = get_ingredient_details(food_type, category)
+            print(ingredient_ids)
+            info = get_ingredient_from_ids(ingredient_ids)
+            messagebox.showinfo("Ingredient Information", info)
 
     def add_combobox():
         # Price mapping for each food type
@@ -232,7 +235,12 @@ def main_menu_screen(root):
         remove_button.pack(side="left", padx=5)
 
         # Create a button to show information about the selected food
-        info_button = tk.Button(order_frame, text="Info", command=lambda: show_info(food_type_combobox.get()))
+        def on_info_click():
+            food_type = food_type_combobox.get()
+            category = category_combobox.get()
+            show_info(food_type, category)
+
+        info_button = tk.Button(order_frame, text="Info", command=on_info_click)
         info_button.pack(side="left", padx=5)
 
         def update_price():
