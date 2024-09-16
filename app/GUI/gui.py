@@ -162,7 +162,13 @@ def main_menu_screen(root):
         "Ice Cream": "Milk" "\n" "Sugar" "\n" "Cream" "\n" "Flavoring",
         "Brownie": "Flour" "\n" "Sugar" "\n" "Cocoa powder" "\n" "Butter" "\n" "Eggs"
     }
+    # Variable to store the total price
+    total_price = tk.DoubleVar()
+    total_price.set(0.00)
 
+    # Label to display the total price
+    total_price_label = tk.Label(root, text="Total Price: $0.00", font=("Helvetica", 14))
+    total_price_label.pack(pady=10)
     def on_category_selected(event, food_type_combobox, size_combobox):
         category = event.widget.get()
 
@@ -239,9 +245,19 @@ def main_menu_screen(root):
             selected_food = food_type_combobox.get()
             selected_size = size_combobox.get()
             category = category_combobox.get()
-            print(selected_food)
             item_price = check_price(category, selected_food, selected_size)
-            price_label.config(text=f"Price: ${item_price:.2f}")
+
+            # Convert Decimal to float
+            item_price_float = float(item_price) if item_price is not None else 0.0
+
+            price_label.config(text=f"Price: ${item_price_float:.2f}")
+
+            # Update total price
+            current_total = total_price.get()
+            new_total = current_total + item_price_float
+            total_price.set(new_total)
+            total_price_label.config(text=f"Total Price: ${new_total:.2f}")
+
 
         # Bind the event for selecting a category
         category_combobox.bind(
@@ -261,8 +277,17 @@ def main_menu_screen(root):
             lambda event: on_food_type_selected(event, category_combobox.get(), size_combobox)
         )
 
-
     def remove_combobox(frame):
+        # Get the price of the item being removed
+        price_label = frame.winfo_children()[3]  # Assuming the price label is the 4th child of the frame
+        item_price = float(price_label.cget("text").split("$")[1])
+
+        # Update total price
+        current_total = total_price.get()
+        new_total = current_total - item_price
+        total_price.set(new_total)
+        total_price_label.config(text=f"Total Price: ${new_total:.2f}")
+
         frame.destroy()
 
     # Button to add a new Combobox set
