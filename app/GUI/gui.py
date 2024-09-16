@@ -187,6 +187,23 @@ def main_menu_screen(root):
         messagebox.showinfo("Ingredients", f"{info}")
 
     def add_combobox():
+        # Price mapping for each food type
+        price_dict = {
+            "Margherita": 10.99, "Pepperoni": 12.49, "Vegetarian": 11.99,
+            "Coke": 1.99, "Pepsi": 1.99, "Water": 0.99,
+            "Cake": 4.50, "Ice Cream": 3.99, "Brownie": 4.75
+        }
+
+        # Size multipliers
+        size_multiplier = {
+            "Small": 1.0,
+            "Medium": 1.3,
+            "Large": 1.5,
+            "Single": 1.0,  # For desserts
+            "Double": 1.3,
+            "Family": 1.5
+        }
+
         # Create a new frame to hold the comboboxes for each order
         order_frame = tk.Frame(combobox_frame)
         order_frame.pack(pady=5, anchor="w")
@@ -206,6 +223,10 @@ def main_menu_screen(root):
         size_combobox.pack(side="left", padx=5)
         size_combobox.set("")
 
+        # Price label to display the price of the selected food type
+        price_label = tk.Label(order_frame, text="Price: $0.00", width=12)
+        price_label.pack(side="left", padx=5)
+
         # Create a button to remove the current set of comboboxes
         remove_button = tk.Button(order_frame, text="Remove", command=lambda: remove_combobox(order_frame))
         remove_button.pack(side="left", padx=5)
@@ -214,11 +235,27 @@ def main_menu_screen(root):
         info_button = tk.Button(order_frame, text="Info", command=lambda: show_info(food_type_combobox.get()))
         info_button.pack(side="left", padx=5)
 
+        def update_price():
+            selected_food = food_type_combobox.get()
+            selected_size = size_combobox.get()
+
+            base_price = price_dict.get(selected_food, 0.00)
+            multiplier = size_multiplier.get(selected_size, 1.0)  # Default to 1.0 if no size is selected
+
+            item_price = base_price * multiplier
+            price_label.config(text=f"Price: ${item_price:.2f}")
+
         # Bind the event for selecting a category
         category_combobox.bind(
             '<<ComboboxSelected>>',
             lambda event: on_category_selected(event, food_type_combobox, size_combobox)
         )
+
+        # Bind the event for selecting a food type to update the price
+        food_type_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
+
+        # Bind the event for selecting a size to update the price
+        size_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
 
         # Bind the event for selecting a food type to show size options
         food_type_combobox.bind(
@@ -237,6 +274,9 @@ def main_menu_screen(root):
     # Frame for the "Back" and "Order" buttons
     button_frame = tk.Frame(root)
     button_frame.pack(pady=10, side="bottom")
+
+    label_frame = tk.Frame(combobox_frame)
+    label_frame.pack(pady=5, anchor="w")
 
     # Back button
     back_button = tk.Button(button_frame, text="Back", command=lambda: log_in_screen(root))
