@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import tkinter.ttk as ttk
 
-from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types
+from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types, check_price
 
 
 def execute_gui():
@@ -238,11 +238,9 @@ def main_menu_screen(root):
         def update_price():
             selected_food = food_type_combobox.get()
             selected_size = size_combobox.get()
-
-            base_price = price_dict.get(selected_food, 0.00)
-            multiplier = size_multiplier.get(selected_size, 1.0)  # Default to 1.0 if no size is selected
-
-            item_price = base_price * multiplier
+            category = category_combobox.get()
+            print(selected_food)
+            item_price = check_price(category, selected_food, selected_size)
             price_label.config(text=f"Price: ${item_price:.2f}")
 
         # Bind the event for selecting a category

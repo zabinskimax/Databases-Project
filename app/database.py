@@ -179,6 +179,39 @@ def get_desserts_types():
     dessert_types = {desserts[1] for desserts in desserts}
     return list(dessert_types)
 
+
+def check_price(category, item_name, item_size):
+    if category == "Pizza":
+        query = text('''
+            SELECT * FROM Pizza
+            WHERE Type = :item_name
+            AND Size = :item_size
+        ''')
+    elif category == "Drink":
+        query = text('''
+            SELECT * FROM Drink
+            WHERE name = :item_name
+            AND size = :item_size
+        ''')
+    elif category == "Dessert":
+        query = text('''
+            SELECT * FROM Dessert
+            WHERE name = :item_name
+            AND size = :item_size
+        ''')
+    else:
+        return 0
+
+    with engine.connect() as connection:
+        with connection.begin() as transaction:
+            result = connection.execute(query, {"item_name": item_name, "item_size": item_size})
+            price = result.fetchone()
+            if price:
+                return price[2] if category in ["Pizza", "Dessert"] else price[3]
+
+    return 0
+
+
 def take_order():
     print('take order')
 
