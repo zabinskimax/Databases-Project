@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import tkinter.ttk as ttk
 
-from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, get_ingredient_from_ids
+from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types
 
 
 def execute_gui():
@@ -132,12 +132,13 @@ def main_menu_screen(root):
     label = tk.Label(root, text="Main Menu", font=("Helvetica", 16))
     label.pack(pady=10)
 
+    # Frame to hold the dynamically added comboboxes
     combobox_frame = tk.Frame(root)
     combobox_frame.pack(pady=10)
 
+    # Define order options and their details
     order_options = ["Pizza", "Drinks", "Desserts"]
 
-    # Dynamically fetch data from the database
     food_types = {
         "Pizza": get_pizza_types(),
         "Drinks": get_drink_types(),
@@ -150,23 +151,40 @@ def main_menu_screen(root):
         "Desserts": ["Single", "Double", "Family"]
     }
 
+    ingredients = {
+        "Margherita":"Tomato sauce" "\n" "Mozzarella cheese" "\n" "Basil",
+        "Pepperoni": "Tomato sauce" "\n" "Mozzarella cheese" "\n" "Pepperoni",
+        "Vegetarian": "Tomato sauce" "\n" "Mozzarella cheese" "\n" "Assorted vegetables",
+        "Coke": "Carbonated water" "\n" "Sugar" "\n" "Caffeine",
+        "Pepsi": "Carbonated water" "\n" "Sugar" "\n" "Caffeine" "\n" "Flavoring",
+        "Water": "Filtered water",
+        "Cake": "Flour" "\n" "Sugar" "\n" "Eggs" "\n" "Butter" "\n" "Baking powder",
+        "Ice Cream": "Milk" "\n" "Sugar" "\n" "Cream" "\n" "Flavoring",
+        "Brownie": "Flour" "\n" "Sugar" "\n" "Cocoa powder" "\n" "Butter" "\n" "Eggs"
+    }
+
     def on_category_selected(event, food_type_combobox, size_combobox):
         category = event.widget.get()
+
+        # Update the food type combobox based on the selected category
         food_type_combobox['values'] = food_types.get(category, [])
         food_type_combobox.set("Select food type")
+
+        # Clear the size combobox when a new category is selected
         size_combobox['values'] = []
         size_combobox.set("")
 
     def on_food_type_selected(event, category, size_combobox):
         food_type = event.widget.get()
-        size_combobox['values'] = size_options.get(category, [])
-        size_combobox.set("Select size")
 
-    def show_info(food_type, category):
-            ingredient_ids = get_ingredient_details(food_type, category)
-            print(ingredient_ids)
-            info = get_ingredient_from_ids(ingredient_ids)
-            messagebox.showinfo("Ingredient Information", info)
+        # Update the size combobox based on the selected category and food type
+        if category in size_options:
+            size_combobox['values'] = size_options[category]
+            size_combobox.set("Select size")
+
+    def show_info(food_type):
+        info = ingredients.get(food_type, "No information available.")
+        messagebox.showinfo("Ingredients", f"{info}")
 
     def add_combobox():
         # Price mapping for each food type
@@ -181,38 +199,40 @@ def main_menu_screen(root):
             "Small": 1.0,
             "Medium": 1.3,
             "Large": 1.5,
-            "Single": 1.0,
+            "Single": 1.0,  # For desserts
             "Double": 1.3,
             "Family": 1.5
         }
 
+        # Create a new frame to hold the comboboxes for each order
         order_frame = tk.Frame(combobox_frame)
         order_frame.pack(pady=5, anchor="w")
 
+        # Create a combobox for selecting a category (Pizza, Drinks, etc.)
         category_combobox = ttk.Combobox(order_frame, values=order_options)
         category_combobox.pack(side="left", padx=5)
         category_combobox.set("Select an order")
 
+        # Create a combobox for selecting the food type, initially empty
         food_type_combobox = ttk.Combobox(order_frame)
         food_type_combobox.pack(side="left", padx=5)
         food_type_combobox.set("")
 
+        # Create a combobox for selecting the size, initially empty
         size_combobox = ttk.Combobox(order_frame)
         size_combobox.pack(side="left", padx=5)
         size_combobox.set("")
 
+        # Price label to display the price of the selected food type
         price_label = tk.Label(order_frame, text="Price: $0.00", width=12)
         price_label.pack(side="left", padx=5)
 
+        # Create a button to remove the current set of comboboxes
         remove_button = tk.Button(order_frame, text="Remove", command=lambda: remove_combobox(order_frame))
         remove_button.pack(side="left", padx=5)
 
-        def on_info_click():
-            food_type = food_type_combobox.get()
-            category = category_combobox.get()
-            show_info(food_type, category)
-
-        info_button = tk.Button(order_frame, text="Info", command=on_info_click)
+        # Create a button to show information about the selected food
+        info_button = tk.Button(order_frame, text="Info", command=lambda: show_info(food_type_combobox.get()))
         info_button.pack(side="left", padx=5)
 
         def update_price():
@@ -220,49 +240,49 @@ def main_menu_screen(root):
             selected_size = size_combobox.get()
 
             base_price = price_dict.get(selected_food, 0.00)
-            multiplier = size_multiplier.get(selected_size, 1.0)
+            multiplier = size_multiplier.get(selected_size, 1.0)  # Default to 1.0 if no size is selected
 
             item_price = base_price * multiplier
             price_label.config(text=f"Price: ${item_price:.2f}")
 
+        # Bind the event for selecting a category
         category_combobox.bind(
             '<<ComboboxSelected>>',
             lambda event: on_category_selected(event, food_type_combobox, size_combobox)
         )
 
+        # Bind the event for selecting a food type to update the price
         food_type_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
+
+        # Bind the event for selecting a size to update the price
         size_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
+
+        # Bind the event for selecting a food type to show size options
         food_type_combobox.bind(
             '<<ComboboxSelected>>',
             lambda event: on_food_type_selected(event, category_combobox.get(), size_combobox)
         )
 
+
     def remove_combobox(frame):
         frame.destroy()
 
+    # Button to add a new Combobox set
     add_combobox_button = tk.Button(root, text="Add an item", command=add_combobox)
     add_combobox_button.pack(pady=10)
 
+    # Frame for the "Back" and "Order" buttons
     button_frame = tk.Frame(root)
     button_frame.pack(pady=10, side="bottom")
 
+    label_frame = tk.Frame(combobox_frame)
+    label_frame.pack(pady=5, anchor="w")
+
+    # Back button
     back_button = tk.Button(button_frame, text="Back", command=lambda: log_in_screen(root))
     back_button.pack(side="left", padx=5)
 
-    order_button = tk.Button(button_frame, text="Order", command=lambda: overview_screen(root))
-    order_button.pack(side="left", padx=5)
-
-def overview_screen(root):
-    clear_screen(root)
-    # Add content for the overview screen
-    label = tk.Label(root, text="Order Overview", font=("Helvetica", 16))
-    label.pack(pady=10)
-
-    # Additional content here
-
-    button_frame = tk.Frame(root)
-    button_frame.pack(pady=10, side="bottom")
-
+    # Non-functional "Order" button
     order_button = tk.Button(button_frame, text="Order", command=lambda: overview_screen(root))
     order_button.pack(side="left", padx=5)
 
