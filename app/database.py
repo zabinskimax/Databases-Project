@@ -17,9 +17,10 @@ database = 'boneless_pizza'
 db_url = f'mysql+mysqlconnector://{username}:{password}@{host}:{port}/{database}'
 engine = create_engine(db_url)
 
-customer_id = None
+
 
 def log_in(email, password):
+    global customer_id
     # Construct the SQL query to check for the user
     query = text('''
             SELECT * FROM Customer WHERE email = :email
@@ -234,8 +235,96 @@ def get_ingredient_from_ids(ids):
                 ingredients.append(ingredient[3])  # Assuming the name is at index 3
     return ingredients
 
-def take_order():
-    print('take order')
+def check_price(category, item_name, item_size):
+    if category == "Pizza":
+        query = text('''
+            SELECT * FROM Pizza
+            WHERE Type = :item_name
+            AND Size = :item_size
+        ''')
+    elif category == "Drink":
+        query = text('''
+            SELECT * FROM Drink
+            WHERE Name = :item_name
+            AND Size = :item_size
+        ''')
+    elif category == "Dessert":
+        query = text('''
+            SELECT * FROM Dessert
+            WHERE Type = :item_name
+        ''')
+    else:
+        return 0
+
+    with engine.connect() as connection:
+        with connection.begin() as transaction:
+            result = connection.execute(query, {"item_name": item_name, "item_size": item_size})
+            price = result.fetchone()
+            print(price)
+            print(query)
+            if price:
+                return price[2]
+
+    return 0
+
+def insert_order(takeaway, total_amount, order_status, discount, payed, pizza_ids, drink_ids, dessert_ids):
+    global customer_id
+    query = text('''
+    INSERT INTO Orders (CustomerID, TakeAway, TotalAmount, OrderStatus, Discount, Payed, Pizza_IDs, Drink_IDs, Dessert_IDs)
+    VALUES (:customer_id, :takeaway, :total_amount, :order_status, :discount, :payed, :pizza_ids, :drink_ids, :dessert_ids)
+    ''')
+
+    with engine.connect() as connection:
+        with connection.begin():
+            result = connection.execute(query, {
+                'customer_id': customer_id,
+                'takeaway': takeaway,
+                'total_amount': total_amount,
+                'order_status': order_status,
+                'discount': discount,
+                'payed': payed,
+                'pizza_ids': pizza_ids,
+                'drink_ids': drink_ids,
+                'dessert_ids': dessert_ids
+            })
+            # Retrieve the last inserted OrderID
+            order_id = connection.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+
+    return order_id
+
+
+def get_pizza_id(pizza_type, size):
+    query = text('''
+        SELECT PizzaID FROM Pizza
+        WHERE Type = :pizza_type AND Size = :size
+    ''')
+    with engine.connect() as connection:
+        result = connection.execute(query, {'pizza_type': pizza_type, 'size': size})
+        pizza = result.fetchone()
+        return pizza.PizzaID if pizza else None
+
+def get_drink_id(drink_name, size):
+    query = text('''
+        SELECT DrinkID FROM Drink
+        WHERE Name = :drink_name AND Size = :size
+    ''')
+    with engine.connect() as connection:
+        result = connection.execute(query, {'drink_name': drink_name, 'size': size})
+        drink = result.fetchone()
+        return drink.DrinkID if drink else None
+
+def get_dessert_id(dessert_type):
+    query = text('''
+        SELECT DessertID FROM Dessert
+        WHERE Type = :dessert_type
+    ''')
+    with engine.connect() as connection:
+        result = connection.execute(query, {'dessert_type': dessert_type})
+        dessert = result.fetchone()
+        return dessert.DessertID if dessert else None
+
+def get_food_ids(order):
+    print('yes')
 
 def get_engine():
     return engine
