@@ -5,7 +5,7 @@ import tkinter.ttk as ttk
 
 from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types, \
     get_ingredient_from_ids, get_ingredient_details, check_price, insert_order, get_pizza_id, get_drink_id, \
-    get_dessert_id
+    get_dessert_id, check_latest_order_status, cancel_latest_order
 
 
 def execute_gui():
@@ -306,6 +306,14 @@ def main_menu_screen(root):
     order_button = tk.Button(button_frame, text="Order", command=lambda: checkout_screen(root, order_details))
     order_button.pack(side="left", padx=5)
 
+    # Button to check order status
+    check_status_button = tk.Button(root, text="Check Order Status", command=lambda: check_status_screen(root))
+    check_status_button.pack(pady=10)
+
+    # Button to cancel an order
+    cancel_order_button = tk.Button(root, text="Cancel an Order", command=lambda: cancel_order_screen(root))
+    cancel_order_button.pack(pady=10)
+
 def take_order_screen(root):
     clear_screen(root)
     username_label = tk.Label(root, text="Username:")
@@ -323,6 +331,21 @@ def checkout_screen(root, order_details):
 
     label = tk.Label(root, text="Checkout", font=("Helvetica", 16))
     label.pack(pady=10)
+
+    # Delivery Address
+    address_label = tk.Label(root, text="Delivery Address:")
+    address_label.pack(pady=5)
+    address_entry = tk.Entry(root, width=50)
+    address_entry.pack(pady=5)
+
+    # Payment Method
+    payment_label = tk.Label(root, text="Payment Method:")
+    payment_label.pack(pady=5)
+    payment_var = tk.StringVar(value="Card")
+    payment_method_frame = tk.Frame(root)
+    payment_method_frame.pack(pady=5)
+    tk.Radiobutton(payment_method_frame, text="Cash", variable=payment_var, value="Cash").pack(side=tk.LEFT)
+    tk.Radiobutton(payment_method_frame, text="Card", variable=payment_var, value="Card").pack(side=tk.LEFT)
 
     # Create a frame to hold the order details
     order_frame = tk.Frame(root)
@@ -351,7 +374,7 @@ def checkout_screen(root, order_details):
 
         tk.Label(item_frame, text=f"{item['category']}:").pack(side=tk.LEFT)
         tk.Label(item_frame, text=f"{item['item']}").pack(side=tk.LEFT, padx=5)
-        if item['size']:
+        if item['size'] is not None:
             tk.Label(item_frame, text=f"Size: {item['size']}").pack(side=tk.LEFT, padx=5)
         tk.Label(item_frame, text=f"${item['price']:.2f}").pack(side=tk.RIGHT)
 
@@ -371,20 +394,27 @@ def checkout_screen(root, order_details):
 
     # Add a "Confirm Order" button
     confirm_button = tk.Button(button_frame, text="Confirm Order",
-                               command=lambda: confirm_order(root, order_details, total_price))
+                               command=lambda: confirm_order(root, order_details, total_price, address_entry.get(), payment_var.get()))
     confirm_button.pack(side=tk.LEFT, padx=5)
 
     # Add a "Back to Menu" button
     back_button = tk.Button(button_frame, text="Back to Menu", command=lambda: main_menu_screen(root))
     back_button.pack(side=tk.LEFT, padx=5)
 
-
-def confirm_order(root, order_details, total_price):
+def confirm_order(root, order_details, total_price, delivery_address, payment_method):
     # Prepare the data for insertion
     takeaway = 1  # Assuming all orders are takeaway for now
-    order_status = 'preparing'  # Initial status
+    order_status = 'Being Prepared'  # Initial status
     discount = 0  # Assuming no discount for now
     payed = 0  # Assuming not paid yet
+
+    if not delivery_address:
+        messagebox.showerror("Error", "Please enter a delivery address.")
+        return
+
+    if not payment_method:
+        messagebox.showerror("Error", "Please select a payment method.")
+        return
 
     # Insert the order into the database
     order_id = insert_order(
@@ -393,7 +423,9 @@ def confirm_order(root, order_details, total_price):
         order_status,
         discount,
         payed,
-        order_details  # Pass the order details directly
+        order_details,
+        delivery_address,  # Pass the delivery address
+        payment_method  # Pass the payment method
     )
 
     if order_id:
@@ -405,10 +437,49 @@ def confirm_order(root, order_details, total_price):
             order_summary += f"- ${item['price']:.2f}\n"
 
         order_summary += f"\nTotal Price: ${total_price:.2f}"
+        order_summary += f"\nDelivery Address: {delivery_address}"
+        order_summary += f"\nPayment Method: {payment_method}"
         messagebox.showinfo("Order Confirmed", f"Your order (ID: {order_id}) has been placed!\n\n{order_summary}")
     else:
         messagebox.showerror("Error", "There was a problem placing your order. Please try again.")
 
     # After confirming the order, return to the main menu
     main_menu_screen(root)
+
+def check_status_screen(root):
+    clear_screen(root)
+
+    label = tk.Label(root, text="Check Latest Order Status", font=("Helvetica", 16))
+    label.pack(pady=10)
+
+    def on_check_status():
+        status_message = check_latest_order_status()
+        messagebox.showinfo("Order Status", status_message)
+
+    check_status_button = tk.Button(root, text="Check Status", command=on_check_status)
+    check_status_button.pack(pady=10)
+
+    back_button = tk.Button(root, text="Back", command=lambda: main_menu_screen(root))
+    back_button.pack(pady=10)
+
+
+
+def cancel_order_screen(root):
+    clear_screen(root)
+
+    label = tk.Label(root, text="Cancel Latest Order", font=("Helvetica", 16))
+    label.pack(pady=10)
+
+    def on_cancel_order():
+        cancel_message = cancel_latest_order()
+        messagebox.showinfo("Order Cancellation", cancel_message)
+
+    cancel_order_button = tk.Button(root, text="Cancel Order", command=on_cancel_order)
+    cancel_order_button.pack(pady=10)
+
+    back_button = tk.Button(root, text="Back", command=lambda: main_menu_screen(root))
+    back_button.pack(pady=10)
+
+
+
 
