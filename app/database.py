@@ -267,30 +267,57 @@ def check_price(category, item_name, item_size):
 
     return 0
 
-def insert_order(takeaway, total_amount, order_status, discount, payed, pizza_ids, drink_ids, dessert_ids):
+def insert_order(takeaway, total_amount, order_status, discount, payed, order_details):
     global customer_id
     query = text('''
-    INSERT INTO Orders (CustomerID, TakeAway, TotalAmount, OrderStatus, Discount, Payed, Pizza_IDs, Drink_IDs, Dessert_IDs)
-    VALUES (:customer_id, :takeaway, :total_amount, :order_status, :discount, :payed, :pizza_ids, :drink_ids, :dessert_ids)
+        INSERT INTO Orders (CustomerID, TakeAway, TotalAmount, OrderStatus, Discount, Payed)
+        VALUES (:customer_id, :takeaway, :total_amount, :order_status, :discount, :payed)
+    ''')
+
+    order_item_query = text('''
+        INSERT INTO OrderItems (OrderID, ItemType, ItemID, Quantity)
+        VALUES (:order_id, :item_type, :item_id, :quantity)
     ''')
 
     with engine.connect() as connection:
         with connection.begin():
+            # Insert the main order
             result = connection.execute(query, {
                 'customer_id': customer_id,
                 'takeaway': takeaway,
                 'total_amount': total_amount,
                 'order_status': order_status,
                 'discount': discount,
-                'payed': payed,
-                'pizza_ids': pizza_ids,
-                'drink_ids': drink_ids,
-                'dessert_ids': dessert_ids
+                'payed': payed
             })
+
             # Retrieve the last inserted OrderID
             order_id = connection.execute(text("SELECT LAST_INSERT_ID()")).scalar()
 
+            # Insert each item into the OrderItems table
+            for item in order_details:
+                if item['category'] == 'Pizza':
+                    item_id = get_pizza_id(item['item'], item['size'])
+                    item_type = 'Pizza'
+                elif item['category'] == 'Drink':
+                    item_id = get_drink_id(item['item'], item['size'])
+                    item_type = 'Drink'
+                elif item['category'] == 'Dessert':
+                    item_id = get_dessert_id(item['item'])
+                    item_type = 'Dessert'
+                else:
+                    continue
+
+                if item_id:
+                    connection.execute(order_item_query, {
+                        'order_id': order_id,
+                        'item_type': item_type,
+                        'item_id': item_id,
+                        'quantity': 1  # Assuming quantity is 1 for now, you can adjust as needed
+                    })
+
     return order_id
+
 
 
 def get_pizza_id(pizza_type, size):

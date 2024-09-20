@@ -386,30 +386,6 @@ def confirm_order(root, order_details, total_price):
     discount = 0  # Assuming no discount for now
     payed = 0  # Assuming not paid yet
 
-    # Separate IDs for each category
-    pizza_ids = []
-    drink_ids = []
-    dessert_ids = []
-
-    for item in order_details:
-        if item['category'] == 'Pizza':
-            pizza_id = get_pizza_id(item['item'], item['size'])
-            if pizza_id:
-                pizza_ids.append(str(pizza_id))
-        elif item['category'] == 'Drink':
-            drink_id = get_drink_id(item['item'], item['size'])
-            if drink_id:
-                drink_ids.append(str(drink_id))
-        elif item['category'] == 'Dessert':
-            dessert_id = get_dessert_id(item['item'])
-            if dessert_id:
-                dessert_ids.append(str(dessert_id))
-
-    # Join IDs into comma-separated strings
-    pizza_ids_str = ','.join(pizza_ids)
-    drink_ids_str = ','.join(drink_ids)
-    dessert_ids_str = ','.join(dessert_ids)
-
     # Insert the order into the database
     order_id = insert_order(
         takeaway,
@@ -417,9 +393,7 @@ def confirm_order(root, order_details, total_price):
         order_status,
         discount,
         payed,
-        pizza_ids_str,
-        drink_ids_str,
-        dessert_ids_str
+        order_details  # Pass the order details directly
     )
 
     if order_id:
@@ -437,3 +411,4 @@ def confirm_order(root, order_details, total_price):
 
     # After confirming the order, return to the main menu
     main_menu_screen(root)
+
