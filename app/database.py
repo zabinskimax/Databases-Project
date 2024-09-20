@@ -285,10 +285,10 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
 
     # Insert into OrderDeliveries table, excluding cancellable_until
     delivery_query = text('''
-        INSERT INTO OrderDeliveries (order_id, order_time, delivery_address, payment_method, delivery_status)
-        VALUES (:order_id, CURRENT_TIMESTAMP, :delivery_address, :payment_method, 'Being Prepared')
+        INSERT INTO OrderDeliveries (order_id, delivery_address, payment_method, delivery_status, customer_id)
+        VALUES (:order_id, :delivery_address, :payment_method, 'Being Prepared', :customer_id)
     ''')
-
+    # Get the current time using datetime.now()
     with engine.connect() as connection:
         with connection.begin():
             # Step 1: Insert the main order into Orders table
@@ -330,7 +330,8 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
             connection.execute(delivery_query, {
                 'order_id': order_id,
                 'delivery_address': delivery_address,
-                'payment_method': payment_method
+                'payment_method': payment_method,
+                'customer_id': customer_id
             })
 
     return order_id
@@ -413,11 +414,13 @@ def cancel_latest_order():
             return "No orders found for this customer."
 
         order_id = order.order_id
-        cancellable_until = order.cancellable_until
+        cancellable_until = order.cancellable_until + timedelta(hours=2)
         delivery_status = order.delivery_status
 
         current_time = datetime.now()
         if current_time > cancellable_until:
+            print(current_time)
+            print(cancellable_until)
             return "Cancellation period has expired."
 
         if delivery_status not in ['Being Prepared', 'Ready for Pickup']:
