@@ -5,7 +5,7 @@ import tkinter.ttk as ttk
 
 from app.database import log_in, create_account, get_pizza_types, get_drink_types, get_desserts_types, \
     get_ingredient_from_ids, get_ingredient_details, check_price, insert_order, get_pizza_id, get_drink_id, \
-    get_dessert_id, check_latest_order_status, cancel_latest_order
+    get_dessert_id, check_latest_order_status, cancel_latest_order, assign_delivery, get_account_information
 
 
 def execute_gui():
@@ -132,10 +132,15 @@ def create_accounts_screen(root):
 def main_menu_screen(root):
     clear_screen(root)
 
+    # Main Menu Label
     label = tk.Label(root, text="Main Menu", font=("Helvetica", 16))
     label.pack(pady=10)
 
-    # Frame to hold the dynamically added comboboxes
+    # Account Information Button
+    account_info_button = tk.Button(root, text="Account Information", command=lambda: account_information_screen(root))
+    account_info_button.pack(anchor='ne', padx=10, pady=5)
+
+    # Frame to hold the dynamically added comboboxes (order items)
     combobox_frame = tk.Frame(root)
     combobox_frame.pack(pady=10)
 
@@ -154,41 +159,6 @@ def main_menu_screen(root):
         "Dessert": []
     }
 
-    ingredients = {
-        "Margherita":"Tomato sauce" "\n" "Mozzarella cheese" "\n" "Basil",
-        "Pepperoni": "Tomato sauce" "\n" "Mozzarella cheese" "\n" "Pepperoni",
-        "Vegetarian": "Tomato sauce" "\n" "Mozzarella cheese" "\n" "Assorted vegetables",
-        "Coke": "Carbonated water" "\n" "Sugar" "\n" "Caffeine",
-        "Pepsi": "Carbonated water" "\n" "Sugar" "\n" "Caffeine" "\n" "Flavoring",
-        "Water": "Filtered water",
-        "Cake": "Flour" "\n" "Sugar" "\n" "Eggs" "\n" "Butter" "\n" "Baking powder",
-        "Ice Cream": "Milk" "\n" "Sugar" "\n" "Cream" "\n" "Flavoring",
-        "Brownie": "Flour" "\n" "Sugar" "\n" "Cocoa powder" "\n" "Butter" "\n" "Eggs"
-    }
-    # Variable to store the total price
-    total_price = tk.DoubleVar()
-    total_price.set(0.00)
-
-    # List to store order details
-    order_details = []
-    # Label to display the total price
-    total_price_label = tk.Label(root, text="Total Price: $0.00", font=("Helvetica", 14))
-    total_price_label.pack(pady=10)
-
-    def on_food_type_selected(event, category, size_combobox):
-        food_type = event.widget.get()
-
-        # Update the size combobox based on the selected category and food type
-        if category in size_options:
-            size_combobox['values'] = size_options[category]
-            size_combobox.set("Select size")
-
-    def show_info(food_type, category):
-        if(category == "Pizza"):
-            ingredient_ids = get_ingredient_details(food_type, category)
-            info = get_ingredient_from_ids(ingredient_ids)
-            messagebox.showinfo("Ingredient Information", info)
-
     def add_combobox():
         order_frame = tk.Frame(combobox_frame)
         order_frame.pack(pady=5, anchor="w")
@@ -205,42 +175,8 @@ def main_menu_screen(root):
         size_combobox.pack(side="left", padx=5)
         size_combobox.set("")
 
-        price_label = tk.Label(order_frame, text="Price: $0.00", width=12)
-        price_label.pack(side="left", padx=5)
-
         remove_button = tk.Button(order_frame, text="Remove", command=lambda: remove_combobox(order_frame))
         remove_button.pack(side="left", padx=5)
-
-        def on_info_click():
-            food_type = food_type_combobox.get()
-            category = category_combobox.get()
-            show_info(food_type, category)
-
-        info_button = tk.Button(order_frame, text="Info", command=on_info_click)
-        info_button.pack(side="left", padx=5)
-        info_button.pack_forget()  # Initially hide the info button
-
-        def update_price():
-            selected_food = food_type_combobox.get()
-            selected_size = size_combobox.get()
-            category = category_combobox.get()
-            item_price = check_price(category, selected_food, selected_size)
-
-            item_price_float = float(item_price) if item_price is not None else 0.0
-
-            current_total = total_price.get()
-            new_total = current_total + item_price_float
-            total_price.set(new_total)
-            total_price_label.config(text=f"Total Price: ${new_total:.2f}")
-
-            price_label.config(text=f"Price: ${item_price_float:.2f}")
-
-            order_details.append({
-                'category': category,
-                'item': selected_food,
-                'size': selected_size,
-                'price': item_price_float
-            })
 
         def on_category_selected(event):
             category = category_combobox.get()
@@ -256,63 +192,62 @@ def main_menu_screen(root):
                 size_combobox['values'] = size_options.get(category, [])
                 size_combobox.set("")
 
-                # Show info button only for Pizza category
-            if category == "Pizza":
-                info_button.pack(side="left", padx=5)
-            else:
-                info_button.pack_forget()
-
         category_combobox.bind('<<ComboboxSelected>>', on_category_selected)
 
-        food_type_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
-        size_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
-
-
     def remove_combobox(frame):
-        # Get the price of the item being removed
-        price_label = frame.winfo_children()[3]  # Assuming the price label is the 4th child of the frame
-        item_price = float(price_label.cget("text").split("$")[1])
-
-        # Update total price
-        current_total = total_price.get()
-        new_total = current_total - item_price
-        total_price.set(new_total)
-        total_price_label.config(text=f"Total Price: ${new_total:.2f}")
-
-        # Remove the item from order details
-        for item in order_details:
-            if item['price'] == item_price:
-                order_details.remove(item)
-                break
-
         frame.destroy()
 
-    # Button to add a new Combobox set
+    # Button to add a new Combobox set (order item)
     add_combobox_button = tk.Button(root, text="Add an item", command=add_combobox)
     add_combobox_button.pack(pady=10)
 
-    # Frame for the "Back" and "Order" buttons
+    # Frame for the "Order" button at the bottom
     button_frame = tk.Frame(root)
     button_frame.pack(pady=10, side="bottom")
 
-    label_frame = tk.Frame(combobox_frame)
-    label_frame.pack(pady=5, anchor="w")
-
-    # Back button
-    back_button = tk.Button(button_frame, text="Back", command=lambda: log_in_screen(root))
-    back_button.pack(side="left", padx=5)
-
-    # Non-functional "Order" button
     order_button = tk.Button(button_frame, text="Order", command=lambda: checkout_screen(root, order_details))
     order_button.pack(side="left", padx=5)
 
-    # Button to check order status
+def account_information_screen(root):
+    clear_screen(root)
+
+    # Fetch account information from the database
+    account_info = get_account_information()
+
+    if not account_info:
+        messagebox.showerror("Error", "Unable to fetch account information.")
+        return
+
+    # Account Information Label
+    label = tk.Label(root, text="Account Information", font=("Helvetica", 16))
+    label.pack(pady=10)
+
+    # Display Account Information
+    info_labels = [
+        ("Name:", account_info['Name']),
+        ("Gender:", account_info['Gender']),
+        ("Birthdate:", account_info['Birthdate']),
+        ("Phone Number:", account_info['PhoneNumber']),
+        ("Address:", account_info['Address']),
+        ("Email:", account_info['Email']),
+        ("Number of Orders:", account_info['NumberOfOrders']),
+    ]
+
+    for label_text, value in info_labels:
+        info_label = tk.Label(root, text=f"{label_text} {value}", font=("Helvetica", 12))
+        info_label.pack(pady=5)
+
+    # Check Order Status Button
     check_status_button = tk.Button(root, text="Check Order Status", command=lambda: check_status_screen(root))
     check_status_button.pack(pady=10)
 
-    # Button to cancel an order
+    # Cancel Order Button
     cancel_order_button = tk.Button(root, text="Cancel an Order", command=lambda: cancel_order_screen(root))
     cancel_order_button.pack(pady=10)
+
+    # Back to Main Menu Button
+    back_button = tk.Button(root, text="Back to Menu", command=lambda: main_menu_screen(root))
+    back_button.pack(pady=10)
 
 def take_order_screen(root):
     clear_screen(root)
@@ -327,6 +262,12 @@ def take_order_screen(root):
 
 
 def checkout_screen(root, order_details):
+    # Ensure at least one pizza is selected
+    has_pizza = any(item['category'] == 'Pizza' for item in order_details)
+
+    if not has_pizza:
+        messagebox.showerror("Error", "You must select at least one pizza before proceeding to checkout.")
+        return
     clear_screen(root)
 
     label = tk.Label(root, text="Checkout", font=("Helvetica", 16))
@@ -429,6 +370,16 @@ def confirm_order(root, order_details, total_price, delivery_address, payment_me
     )
 
     if order_id:
+        # Assign a delivery person after the order is inserted
+        designated_area = "North District"  # You might need to define how to determine the designated area
+        delivery_person = assign_delivery(designated_area)
+
+        if delivery_person:
+            delivery_person_name = delivery_person.driver_name
+        else:
+            delivery_person_name = "No available delivery person"
+
+        # Create the order summary
         order_summary = "Order Summary:\n\n"
         for item in order_details:
             order_summary += f"{item['category']}: {item['item']} "
@@ -439,11 +390,13 @@ def confirm_order(root, order_details, total_price, delivery_address, payment_me
         order_summary += f"\nTotal Price: ${total_price:.2f}"
         order_summary += f"\nDelivery Address: {delivery_address}"
         order_summary += f"\nPayment Method: {payment_method}"
+        order_summary += f"\nAssigned Delivery Person: {delivery_person_name}"
+
         messagebox.showinfo("Order Confirmed", f"Your order (ID: {order_id}) has been placed!\n\n{order_summary}")
     else:
         messagebox.showerror("Error", "There was a problem placing your order. Please try again.")
 
-    # After confirming the order, return to the main menu
+        # After confirming the order, return to the main menu
     main_menu_screen(root)
 
 def check_status_screen(root):

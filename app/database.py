@@ -114,32 +114,33 @@ def take_order(take_away, total_amount, order_status, discount, payed):
         connection.execute(query, customer_id=customer_id, take_away=take_away, total_amount=total_amount, order_status=order_status, discount=discount, payed=payed)
 
 
-def assign_delivery(designated_area):
-    # Calculate half an hour ago
-    half_hour_ago = datetime.now() - timedelta(minutes=30)
+def assign_delivery(assigned_area):
+    # Calculate 150 minutes ago (2.5 hours)
+    half_hour_ago = datetime.now() - timedelta(minutes=150)
 
     query = text('''
-            SELECT * FROM DeliveryPerson
-            WHERE designated_area = :designated_area
-            AND last_delivery_start_time < :half_hour_ago
-            ORDER BY last_delivery_start_time ASC
-            LIMIT 1
-        ''')
+                SELECT * FROM DeliveryPerson
+                WHERE assigned_area = :assigned_area
+                AND (last_delivery_start_time < :half_hour_ago OR last_delivery_start_time IS NULL)
+                ORDER BY last_delivery_start_time ASC
+                LIMIT 1
+            ''')
 
     with engine.connect() as connection:
-        result = connection.execute(query, designated_area=designated_area, half_hour_ago=half_hour_ago)
+        result = connection.execute(query, {'assigned_area': assigned_area, 'half_hour_ago': half_hour_ago})
         delivery_person = result.fetchone()
 
         if delivery_person:
             update_query = text('''
                     UPDATE DeliveryPerson
                     SET last_delivery_start_time = :now
-                    WHERE id = :delivery_person_id
+                    WHERE delivery_person_id = :delivery_person_id
                 ''')
 
-            connection.execute(update_query, now=datetime.now(), delivery_person_id=delivery_person.id)
+            connection.execute(update_query, {'now': datetime.now(), 'delivery_person_id': delivery_person.delivery_person_id})
 
         return delivery_person
+
 
 
 def get_pizza_info():
@@ -436,7 +437,30 @@ def cancel_latest_order():
         connection.execute(cancel_query, {'order_id': order_id})
         return "Your order has been successfully canceled."
 
+def get_account_information():
+    global customer_id
+    query = text('''
+        SELECT Name, Gender, Birthdate, PhoneNumber, Address, Email, NumberOfOrders
+        FROM Customer
+        WHERE CustomerID = :customer_id
+    ''')
 
+    with engine.connect() as connection:
+        result = connection.execute(query, {'customer_id': customer_id})
+        account_info = result.fetchone()
+
+    if account_info:
+        return {
+            'Name': account_info.Name,
+            'Gender': account_info.Gender,
+            'Birthdate': account_info.Birthdate,
+            'PhoneNumber': account_info.PhoneNumber,
+            'Address': account_info.Address,
+            'Email': account_info.Email,
+            'NumberOfOrders': account_info.NumberOfOrders,
+        }
+
+    return None
 def get_food_ids(order):
     print('yes')
 
