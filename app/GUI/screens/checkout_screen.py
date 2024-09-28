@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import tkinter as tk
 from tkinter import messagebox
 import random
@@ -144,7 +145,12 @@ def checkout_screen(root, order_details, controller):
     else:
         total_price_label.pack(pady=(10, 5))
 
-
+        # Calculate the estimated delivery time (current time + 30 minutes)
+    estimated_delivery_time = datetime.now() + timedelta(minutes=30)
+    estimated_delivery_label = tk.Label(root,
+                                        text=f"Estimated Delivery Time: {estimated_delivery_time.strftime('%H:%M')}",
+                                        font=("Helvetica", 12))
+    estimated_delivery_label.pack(pady=10)
 
     # Create a frame for buttons
     button_frame = tk.Frame(root)
