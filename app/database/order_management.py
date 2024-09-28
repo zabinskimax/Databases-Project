@@ -1,3 +1,5 @@
+
+
 from sqlalchemy import text
 from datetime import datetime, timedelta
 from app.database.account_management import get_customer_id
@@ -8,7 +10,7 @@ from app.database.queries import get_pizza_id, get_drink_id, get_dessert_id
 engine = get_engine()
 
 
-def insert_order(takeaway, total_amount, order_status, discount, payed, order_details, delivery_address, payment_method):
+def insert_order(takeaway, total_amount, order_status, discount, payed, order_details, delivery_postal_code, delivery_address, payment_method):
     customer_id = get_customer_id()
 
     # Insert into Orders table
@@ -23,12 +25,12 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
         VALUES (:order_id, :item_type, :item_id, :quantity)
     ''')
 
-    # Insert into OrderDeliveries table, without delivery_status since it doesn't exist
+    # Insert into OrderDeliveries table, excluding cancellable_until
     delivery_query = text('''
-        INSERT INTO OrderDeliveries (order_id, order_time, delivery_address, payment_method, customer_id)
-        VALUES (:order_id, :order_time, :delivery_address, :payment_method, :customer_id)
+        INSERT INTO OrderDeliveries (order_id, order_time, delivery_postal_code, delivery_address, payment_method, customer_id)
+        VALUES (:order_id, :order_time, :delivery_postal_code, :delivery_address, :payment_method, :customer_id)
+        
     ''')
-
     # Get the current time using datetime.now()
     current_time = datetime.now()
 
@@ -72,6 +74,7 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
             # Step 3: Insert into the OrderDeliveries table without specifying cancellable_until
             connection.execute(delivery_query, {
                 'order_id': order_id,
+                'delivery_postal_code': delivery_postal_code,
                 'order_time': current_time,  # Pass the current time as order_time
                 'delivery_address': delivery_address,
                 'payment_method': payment_method,
@@ -170,6 +173,6 @@ def check_latest_order_status():
             order_status = 'Out For Delivery'
 
         return (f"Order ID: {order_id}\n"
-                f"Order Status: {order_status}\n"
+                f"Order Status: {status}\n"
                 f"Order Time: {order_time}\n"
                 f"Cancelable Until: {cancellable_until}")

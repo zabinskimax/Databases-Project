@@ -8,12 +8,16 @@ def clear_screen(root):
     for widget in root.winfo_children():
         widget.pack_forget()
 
-def confirm_order(root, controller, order_details, total_price, delivery_address, payment_method):
+def confirm_order(root, controller, order_details, total_price, delivery_postal_code, delivery_address, payment_method):
     # Prepare the data for insertion
     takeaway = 1  # Assuming all orders are takeaway for now
     order_status = 'Preparing'  # Initial status
     discount = 0  # Assuming no discount for now
     payed = 0  # Assuming not paid yet
+
+    if not delivery_postal_code:
+        messagebox.showerror("Error", "Please enter a delivery postal code.")
+        return
 
     if not delivery_address:
         messagebox.showerror("Error", "Please enter a delivery address.")
@@ -31,6 +35,7 @@ def confirm_order(root, controller, order_details, total_price, delivery_address
         discount,
         payed,
         order_details,
+        delivery_postal_code,
         delivery_address,  # Pass the delivery address
         payment_method  # Pass the payment method
     )
@@ -54,6 +59,7 @@ def confirm_order(root, controller, order_details, total_price, delivery_address
             order_summary += f"- ${item['price']:.2f}\n"
 
         order_summary += f"\nTotal Price: ${total_price:.2f}"
+        order_summary += f"\nDelivery Postal Code: {delivery_postal_code}"
         order_summary += f"\nDelivery Address: {delivery_address}"
         order_summary += f"\nPayment Method: {payment_method}"
         order_summary += f"\nAssigned Delivery Person: {delivery_person_name}"

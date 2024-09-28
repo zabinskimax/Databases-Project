@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 engine = get_engine()
 
 def assign_delivery(assigned_area):
-    # Calculate 150 minutes ago (2.5 hours)
+    # Calculate 30 minutes ago (2.5 hours)
     half_hour_ago = datetime.now() - timedelta(minutes=30)
 
     query = text('''

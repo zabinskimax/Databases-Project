@@ -35,3 +35,7 @@ class AppController:
     def show_checkout_screen(self, order_details):
         from app.GUI.screens.checkout_screen import checkout_screen
         checkout_screen(self.root, order_details, self)
+
+    def show_financial_overview_screen(self):
+        from app.GUI.screens.financial_overview_screen import financial_overview_screen
+        financial_overview_screen(self.root, self)

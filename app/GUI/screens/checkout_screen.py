@@ -25,6 +25,12 @@ def checkout_screen(root, order_details, controller):
     label = tk.Label(root, text="Checkout", font=("Helvetica", 16))
     label.pack(pady=10)
 
+    # Postal Code
+    postal_code_label = tk.Label(root, text="Postal Code:")
+    postal_code_label.pack(pady=5)
+    postal_code_entry = tk.Entry(root, width=20)
+    postal_code_entry.pack(pady=5)
+
     # Delivery Address
     address_label = tk.Label(root, text="Delivery Address:")
     address_label.pack(pady=5)
@@ -136,8 +142,7 @@ def checkout_screen(root, order_details, controller):
 
     # Add a "Confirm Order" button
     confirm_button = tk.Button(button_frame, text="Confirm Order",
-                               command=lambda: confirm_order(root, controller, order_details, total_price,
-                                                             address_entry.get(), payment_var.get()))
+                               command=lambda: confirm_order(root, controller, order_details, total_price, postal_code_entry.get(), address_entry.get(), payment_var.get()))
     confirm_button.pack(side=tk.LEFT, padx=5)
 
     # Add a "Back to Menu" button
