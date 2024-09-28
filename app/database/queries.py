@@ -194,3 +194,50 @@ def check_price(category, item_name, item_size):
 
     return 0
 
+
+def check_if_birthday():
+    customer_id = get_customer_id()  # Assuming this function retrieves the current customer's ID
+    today = datetime.today()
+
+    # SQL query to check if today is the customer's birthday
+    birthday_query = text('''
+        SELECT COUNT(*)
+        FROM Customer
+        WHERE CustomerID = :customer_id
+        AND MONTH(Birthdate) = :current_month
+        AND DAY(Birthdate) = :current_day
+    ''')
+
+    # SQL query to check if the customer has already ordered today
+    order_query = text('''
+        SELECT COUNT(*)
+        FROM OrderDeliveries
+        WHERE customer_id = :customer_id
+        AND DATE(order_time) = :today_date
+    ''')
+
+    with engine.connect() as connection:
+        # Execute the birthday query
+        birthday_result = connection.execute(birthday_query, {
+            'customer_id': customer_id,
+            'current_month': today.month,
+            'current_day': today.day
+        })
+
+        # Check if today is the customer's birthday
+        birthday_count = birthday_result.scalar()
+
+        if birthday_count == 0:
+            return False
+
+        # Execute the order query to check if the customer has already ordered today
+        order_result = connection.execute(order_query, {
+            'customer_id': customer_id,
+            'today_date': today.date()
+        })
+
+        # Check if the customer has ordered today
+        order_count = order_result.scalar()
+        print(order_count)
+        # If the customer has already placed an order today, return False
+        return order_count == 0

@@ -38,3 +38,49 @@ def add_an_order_to_order_sum():
     with engine.connect() as connection:
         connection.execute(update_query, {'customer_id': customer_id})
         connection.commit()
+
+
+def has_used_discount(discount_code):
+    customer_id = get_customer_id()
+    query = text('''
+        SELECT cd.used
+        FROM CustomerDiscounts cd
+        JOIN Discounts d ON cd.discount_id = d.discount_id
+        WHERE cd.customer_id = :customer_id AND d.discount_code = :discount_code
+    ''')
+
+    with engine.connect() as connection:
+        result = connection.execute(query, {'customer_id': customer_id, 'discount_code': discount_code}).fetchone()
+        return result is not None and result[0]
+
+
+# Function to apply a discount code and mark it as used for the customer
+def apply_discount_code(discount_code):
+    customer_id = get_customer_id()
+    if has_used_discount(discount_code):
+        return None  # Discount already used
+
+    # Get the discount details
+    query = text('''
+        SELECT discount_id, discount_percentage
+        FROM Discounts
+        WHERE discount_code = :discount_code AND (expiration_date IS NULL OR expiration_date >= CURRENT_DATE)
+    ''')
+
+    with engine.connect() as connection:
+        discount = connection.execute(query, {'discount_code': discount_code}).fetchone()
+
+        if discount is None:
+            return None  # Discount code doesn't exist or is expired
+
+        discount_id, discount_percentage = discount
+
+        # Mark this discount as used by the customer
+        insert_query = text('''
+            INSERT INTO CustomerDiscounts (customer_id, discount_id, used)
+            VALUES (:customer_id, :discount_id, TRUE)
+        ''')
+        connection.execute(insert_query, {'customer_id': customer_id, 'discount_id': discount_id})
+        connection.commit()
+
+        return discount_percentage

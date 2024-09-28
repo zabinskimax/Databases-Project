@@ -6,6 +6,13 @@ from app.GUI.gui_utils import clear_screen, confirm_order
 from app.database.discount_management import check_if_discount
 
 
+# Sample discount codes dictionary for demonstration
+DISCOUNT_CODES = {
+    "SAVE10": 0.10,  # 10% discount
+    "SAVE20": 0.20,  # 20% discount
+}
+
+
 def checkout_screen(root, order_details, controller):
     # Ensure at least one pizza is selected
     has_pizza = any(item['category'] == 'Pizza' for item in order_details)
@@ -32,6 +39,29 @@ def checkout_screen(root, order_details, controller):
     payment_method_frame.pack(pady=5)
     tk.Radiobutton(payment_method_frame, text="Cash", variable=payment_var, value="Cash").pack(side=tk.LEFT)
     tk.Radiobutton(payment_method_frame, text="Card", variable=payment_var, value="Card").pack(side=tk.LEFT)
+
+    # Discount Code Entry with Button
+    discount_code_frame = tk.Frame(root)
+    discount_code_frame.pack(pady=5)
+
+    discount_code_label = tk.Label(discount_code_frame, text="Enter Discount Code:")
+    discount_code_label.pack(side=tk.LEFT, padx=5)
+
+    discount_code_entry = tk.Entry(discount_code_frame, width=20)
+    discount_code_entry.pack(side=tk.LEFT, padx=5)
+
+    apply_discount_button = tk.Button(discount_code_frame, text="Apply Discount Code",
+                                      command=lambda: apply_discount_and_update_total())
+    apply_discount_button.pack(side=tk.LEFT, padx=5)
+
+    def apply_discount_code():
+        code = discount_code_entry.get().strip()
+        if code in DISCOUNT_CODES:
+            messagebox.showinfo("Success", f"Discount code applied: {int(DISCOUNT_CODES[code] * 100)}% off!")
+            return DISCOUNT_CODES[code]
+        else:
+            messagebox.showerror("Error", "Invalid discount code.")
+            return 0
 
     # Create a frame to hold the order details
     order_frame = tk.Frame(root)
@@ -71,13 +101,34 @@ def checkout_screen(root, order_details, controller):
     scrollbar.pack(side="right", fill="y")
 
     total_discount = calculate_discount(total_price)
-    # Add a label for discount
-    discount_label = tk.Label(root, text=f"Discount:{total_discount}", font=("Helvetica", 12))
-    discount_label.pack(pady=5)
+
+    discount_label = None
+    # Conditionally display the discount label above the total price label
+    if total_discount > 0:
+        discount_label = tk.Label(root, text=f"Discount: ${total_discount:.2f}", font=("Helvetica", 12))
+        discount_label.pack(pady=5)
 
     # Display total price
-    total_price_label = tk.Label(root, text=f"Total Price: ${total_price-total_discount:.2f}", font=("Helvetica", 14))
-    total_price_label.pack(pady=10)
+    total_price_label = tk.Label(root, text=f"Total Price: ${total_price - total_discount:.2f}", font=("Helvetica", 14))
+    if discount_label is not None:
+        total_price_label.pack(pady=10)
+    else:
+        total_price_label.pack(pady=(10, 5))
+
+    def apply_discount_and_update_total():
+        nonlocal discount_label  # Allows modifying the discount_label variable from the parent scope
+        code_discount = apply_discount_code()
+        total_discount_with_code = total_discount + (total_price * code_discount)
+        total_price_label.config(text=f"Total Price: ${total_price - total_discount_with_code:.2f}")
+
+        if total_discount_with_code > total_discount:
+            if discount_label is not None:
+                discount_label.config(text=f"Discount: ${total_discount_with_code:.2f}")
+            else:
+                discount_label = tk.Label(root, text=f"Discount: ${total_discount_with_code:.2f}",
+                                          font=("Helvetica", 12))
+                discount_label.pack(pady=5)
+                total_price_label.pack(pady=10)
 
     # Create a frame for buttons
     button_frame = tk.Frame(root)
@@ -85,7 +136,8 @@ def checkout_screen(root, order_details, controller):
 
     # Add a "Confirm Order" button
     confirm_button = tk.Button(button_frame, text="Confirm Order",
-                               command=lambda: confirm_order(root, controller, order_details, total_price, address_entry.get(), payment_var.get()))
+                               command=lambda: confirm_order(root, controller, order_details, total_price,
+                                                             address_entry.get(), payment_var.get()))
     confirm_button.pack(side=tk.LEFT, padx=5)
 
     # Add a "Back to Menu" button

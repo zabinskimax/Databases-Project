@@ -4,7 +4,11 @@ from tkinter import messagebox
 
 from app.GUI.gui_utils import clear_screen
 from app.database.queries import get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, \
-    get_ingredient_from_ids, check_price
+    get_ingredient_from_ids, check_price, check_if_birthday
+
+# Track if the free pizza and drink have been applied
+free_pizza_applied = tk.BooleanVar(value=False)
+free_drink_applied = tk.BooleanVar(value=False)
 
 
 def main_menu_screen(root, controller):
@@ -17,6 +21,12 @@ def main_menu_screen(root, controller):
     # Account Information Button
     account_info_button = tk.Button(root, text="Account Information", command=lambda: controller.show_account_information_screen())
     account_info_button.pack(anchor='ne', padx=10, pady=5)
+
+    # Check if it's the customer's birthday
+    if check_if_birthday():
+        birthday_message = tk.Label(root, text="Happy Birthday! You get a free pizza and drink!",
+                                    font=("Helvetica", 14), fg="green")
+        birthday_message.pack(pady=10)
 
     # Frame to hold the dynamically added comboboxes (order items)
     combobox_frame = tk.Frame(root)
@@ -96,9 +106,20 @@ def main_menu_screen(root, controller):
             selected_food = food_type_combobox.get()
             selected_size = size_combobox.get()
             category = category_combobox.get()
-            item_price = check_price(category, selected_food, selected_size)
-
-            item_price_float = float(item_price) if item_price is not None else 0.0
+            # Check if the customer is eligible for a free pizza or drink
+            if check_if_birthday():
+                if category == "Pizza" and not free_pizza_applied.get():
+                    item_price_float = 0.0
+                    free_pizza_applied.set(True)
+                elif category == "Drink" and not free_drink_applied.get():
+                    item_price_float = 0.0
+                    free_drink_applied.set(True)
+                else:
+                    item_price = check_price(category, selected_food, selected_size)
+                    item_price_float = float(item_price) if item_price is not None else 0.0
+            else:
+                item_price = check_price(category, selected_food, selected_size)
+                item_price_float = float(item_price) if item_price is not None else 0.0
 
             current_total = total_price.get()
             new_total = current_total + item_price_float
@@ -134,7 +155,6 @@ def main_menu_screen(root, controller):
 
         food_type_combobox.bind('<<ComboboxSelected>>', lambda event: update_price_for_desserts())
         size_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
-
 
     def remove_combobox(frame):
         # Get the price of the item being removed
