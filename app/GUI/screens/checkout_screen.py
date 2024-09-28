@@ -3,6 +3,7 @@ from tkinter import messagebox
 
 
 from app.GUI.gui_utils import clear_screen, confirm_order
+from app.database.discount_management import check_if_discount
 
 
 def checkout_screen(root, order_details, controller):
@@ -69,8 +70,13 @@ def checkout_screen(root, order_details, controller):
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
 
+    total_discount = calculate_discount(total_price)
+    # Add a label for discount
+    discount_label = tk.Label(root, text=f"Discount:{total_discount}", font=("Helvetica", 12))
+    discount_label.pack(pady=5)
+
     # Display total price
-    total_price_label = tk.Label(root, text=f"Total Price: ${total_price:.2f}", font=("Helvetica", 14))
+    total_price_label = tk.Label(root, text=f"Total Price: ${total_price-total_discount:.2f}", font=("Helvetica", 14))
     total_price_label.pack(pady=10)
 
     # Create a frame for buttons
@@ -83,5 +89,10 @@ def checkout_screen(root, order_details, controller):
     confirm_button.pack(side=tk.LEFT, padx=5)
 
     # Add a "Back to Menu" button
-    back_button = tk.Button(button_frame, text="Back to Menu", command=lambda: controller.show_main_menu_screen(root))
+    back_button = tk.Button(button_frame, text="Back to Menu", command=lambda: controller.show_main_menu_screen())
     back_button.pack(side=tk.LEFT, padx=5)
+
+def calculate_discount(total_price):
+    if check_if_discount():
+        return total_price * 0.1
+    return 0

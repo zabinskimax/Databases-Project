@@ -2,6 +2,7 @@ from sqlalchemy import text
 from datetime import datetime, timedelta
 from app.database.account_management import get_customer_id
 from app.database.database import get_engine
+from app.database.discount_management import add_an_order_to_order_sum
 from app.database.queries import get_pizza_id, get_drink_id, get_dessert_id
 
 engine = get_engine()
@@ -77,6 +78,7 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
                 'customer_id': customer_id
             })
 
+    add_an_order_to_order_sum()
     return order_id
 
 def cancel_latest_order():
