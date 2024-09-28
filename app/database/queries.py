@@ -75,13 +75,6 @@ def get_account_information():
 
     return None
 
-def get_pizza_info():
-    query = text('''
-                SELECT * FROM Pizza
-            ''')
-    with engine.connect() as connection:
-        result = connection.execute(query)
-        return result.fetchall()
 
 def get_pizza_types():
     query = text('''
