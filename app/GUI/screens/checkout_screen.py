@@ -3,20 +3,46 @@ from tkinter import messagebox
 
 
 from app.GUI.gui_utils import clear_screen, confirm_order
-from app.database.discount_management import check_if_discount
-
-
-# Sample discount codes dictionary for demonstration
-DISCOUNT_CODES = {
-    "SAVE10": 0.10,  # 10% discount
-    "SAVE20": 0.20,  # 20% discount
-}
+from app.database.discount_management import check_if_discount, apply_discount_code, update_discount_usage
+from app.database.queries import check_if_birthday
 
 
 def checkout_screen(root, order_details, controller):
     # Ensure at least one pizza is selected
     has_pizza = any(item['category'] == 'Pizza' for item in order_details)
+    confirmed_discount_code = None
+    code_discount = 0
+    discount_id = None
+    def apply_discount_and_update_total():
+        nonlocal discount_label  # Allows modifying the discount_label variable from the parent scope
+        nonlocal code_discount
+        nonlocal confirmed_discount_code
+        nonlocal discount_id  # Add this to keep track of the discount_id
 
+        discount_code = discount_code_entry.get().strip()
+        result = apply_discount_code(discount_code)
+
+        if result is None:
+            code_discount = 0  # No discount or discount already used
+            discount_id = None
+        else:
+            code_discount, discount_id = result  # Store discount_id for later use
+            code_discount = float(code_discount) * total_price  # Convert Decimal to float
+
+        total_price_label.config(text=f"Total Price: ${total_price - code_discount - ten_orders_discount:.2f}")
+
+        if code_discount > 0:  # Only show the discount label if there is a discount
+            if discount_label is not None:
+                discount_label.config(text=f"Discount: ${code_discount+ten_orders_discount:.2f}")
+            else:
+                discount_label = tk.Label(root, text=f"Discount: ${code_discount+ten_orders_discount:.2f}",
+                                          font=("Helvetica", 12))
+                discount_label.pack(pady=5)
+                total_price_label.pack(pady=10)
+        elif discount_label is not None:
+            # If there's no discount and the label exists, remove it
+            discount_label.pack_forget()
+            discount_label = None  # Reset the label
     if not has_pizza:
         messagebox.showerror("Error", "You must select at least one pizza before proceeding to checkout.")
         return
@@ -60,15 +86,6 @@ def checkout_screen(root, order_details, controller):
                                       command=lambda: apply_discount_and_update_total())
     apply_discount_button.pack(side=tk.LEFT, padx=5)
 
-    def apply_discount_code():
-        code = discount_code_entry.get().strip()
-        if code in DISCOUNT_CODES:
-            messagebox.showinfo("Success", f"Discount code applied: {int(DISCOUNT_CODES[code] * 100)}% off!")
-            return DISCOUNT_CODES[code]
-        else:
-            messagebox.showerror("Error", "Invalid discount code.")
-            return 0
-
     # Create a frame to hold the order details
     order_frame = tk.Frame(root)
     order_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
@@ -105,36 +122,24 @@ def checkout_screen(root, order_details, controller):
     # Pack the canvas and scrollbar
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
-
-    total_discount = calculate_discount(total_price)
+    ten_orders_discount = 0
+    if check_if_birthday():
+        ten_orders_discount += calculate_discount(total_price)
 
     discount_label = None
     # Conditionally display the discount label above the total price label
-    if total_discount > 0:
-        discount_label = tk.Label(root, text=f"Discount: ${total_discount:.2f}", font=("Helvetica", 12))
+    if ten_orders_discount > 0:
+        discount_label = tk.Label(root, text=f"Discount: ${ten_orders_discount:.2f}", font=("Helvetica", 12))
         discount_label.pack(pady=5)
 
     # Display total price
-    total_price_label = tk.Label(root, text=f"Total Price: ${total_price - total_discount:.2f}", font=("Helvetica", 14))
+    total_price_label = tk.Label(root, text=f"Total Price: ${total_price - ten_orders_discount:.2f}", font=("Helvetica", 14))
     if discount_label is not None:
         total_price_label.pack(pady=10)
     else:
         total_price_label.pack(pady=(10, 5))
 
-    def apply_discount_and_update_total():
-        nonlocal discount_label  # Allows modifying the discount_label variable from the parent scope
-        code_discount = apply_discount_code()
-        total_discount_with_code = total_discount + (total_price * code_discount)
-        total_price_label.config(text=f"Total Price: ${total_price - total_discount_with_code:.2f}")
 
-        if total_discount_with_code > total_discount:
-            if discount_label is not None:
-                discount_label.config(text=f"Discount: ${total_discount_with_code:.2f}")
-            else:
-                discount_label = tk.Label(root, text=f"Discount: ${total_discount_with_code:.2f}",
-                                          font=("Helvetica", 12))
-                discount_label.pack(pady=5)
-                total_price_label.pack(pady=10)
 
     # Create a frame for buttons
     button_frame = tk.Frame(root)
@@ -142,12 +147,18 @@ def checkout_screen(root, order_details, controller):
 
     # Add a "Confirm Order" button
     confirm_button = tk.Button(button_frame, text="Confirm Order",
-                               command=lambda: confirm_order(root, controller, order_details, total_price, postal_code_entry.get(), address_entry.get(), payment_var.get()))
+                               command=lambda: confirm_order_with_discount_update())
     confirm_button.pack(side=tk.LEFT, padx=5)
 
     # Add a "Back to Menu" button
     back_button = tk.Button(button_frame, text="Back to Menu", command=lambda: controller.show_main_menu_screen())
     back_button.pack(side=tk.LEFT, padx=5)
+
+    def confirm_order_with_discount_update():
+        if confirmed_discount_code:
+            update_discount_usage(discount_id)
+        confirm_order(root, controller, order_details, total_price - ten_orders_discount - code_discount,
+                      postal_code_entry.get(), address_entry.get(), payment_var.get())
 
 def calculate_discount(total_price):
     if check_if_discount():
