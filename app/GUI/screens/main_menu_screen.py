@@ -120,19 +120,36 @@ def main_menu_screen(root, controller):
                 item_price = check_price(category, selected_food, selected_size)
                 item_price_float = float(item_price) if item_price is not None else 0.0
 
-            current_total = total_price.get()
-            new_total = current_total + item_price_float
-            total_price.set(new_total)
-            total_price_label.config(text=f"Total Price: ${new_total:.2f}")
+                # Check if this item is already in the order
+                existing_item = next(
+                    (item for item in order_details if item['category'] == category and item['item'] == selected_food),
+                    None)
 
-            price_label.config(text=f"Price: ${item_price_float:.2f}")
+                if existing_item:
+                    # If the item already exists, update its price and size
+                    current_total = total_price.get()
+                    current_total -= existing_item['price']  # Subtract the old price
+                    new_total = current_total + item_price_float  # Add the new price
+                    total_price.set(new_total)
+                    total_price_label.config(text=f"Total Price: ${new_total:.2f}")
 
-            order_details.append({
-                'category': category,
-                'item': selected_food,
-                'size': selected_size,
-                'price': item_price_float
-            })
+                    existing_item['size'] = selected_size
+                    existing_item['price'] = item_price_float
+                else:
+                    # If the item is new, add it to the order
+                    current_total = total_price.get()
+                    new_total = current_total + item_price_float
+                    total_price.set(new_total)
+                    total_price_label.config(text=f"Total Price: ${new_total:.2f}")
+
+                    order_details.append({
+                        'category': category,
+                        'item': selected_food,
+                        'size': selected_size,
+                        'price': item_price_float
+                    })
+                price_label.config(text=f"Price: ${item_price_float:.2f}")
+
         def on_category_selected(event):
             category = category_combobox.get()
             food_type_combobox['values'] = food_types.get(category, [])
