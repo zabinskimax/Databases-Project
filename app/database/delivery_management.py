@@ -7,7 +7,7 @@ engine = get_engine()
 
 def assign_delivery(assigned_area):
     # Calculate 150 minutes ago (2.5 hours)
-    half_hour_ago = datetime.now() - timedelta(minutes=150)
+    half_hour_ago = datetime.now() - timedelta(minutes=30)
 
     query = text('''
                 SELECT * FROM DeliveryPerson
@@ -20,14 +20,15 @@ def assign_delivery(assigned_area):
     with engine.connect() as connection:
         result = connection.execute(query, {'assigned_area': assigned_area, 'half_hour_ago': half_hour_ago})
         delivery_person = result.fetchone()
-
-        if delivery_person:
+        print(delivery_person)
+        if delivery_person is not None:
+            print(delivery_person[0])
             update_query = text('''
                     UPDATE DeliveryPerson
-                    SET last_delivery_start_time = :now
+                    SET last_delivery_start_time = DATE_ADD(NOW(), INTERVAL 2 HOUR)
                     WHERE delivery_person_id = :delivery_person_id
                 ''')
 
-            connection.execute(update_query, {'now': datetime.now(), 'delivery_person_id': delivery_person.delivery_person_id})
-
+            connection.execute(update_query, {'delivery_person_id': delivery_person[0]})
+            connection.commit()
         return delivery_person

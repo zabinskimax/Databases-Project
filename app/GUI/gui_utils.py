@@ -11,7 +11,7 @@ def clear_screen(root):
 def confirm_order(root, controller, order_details, total_price, delivery_address, payment_method):
     # Prepare the data for insertion
     takeaway = 1  # Assuming all orders are takeaway for now
-    order_status = 'Being Prepared'  # Initial status
+    order_status = 'Preparing'  # Initial status
     discount = 0  # Assuming no discount for now
     payed = 0  # Assuming not paid yet
 

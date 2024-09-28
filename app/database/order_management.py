@@ -1,5 +1,3 @@
-
-
 from sqlalchemy import text
 from datetime import datetime, timedelta
 from app.database.account_management import get_customer_id
@@ -24,12 +22,15 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
         VALUES (:order_id, :item_type, :item_id, :quantity)
     ''')
 
-    # Insert into OrderDeliveries table, excluding cancellable_until
+    # Insert into OrderDeliveries table, without delivery_status since it doesn't exist
     delivery_query = text('''
-        INSERT INTO OrderDeliveries (order_id, delivery_address, payment_method, delivery_status, customer_id)
-        VALUES (:order_id, :delivery_address, :payment_method, 'Being Prepared', :customer_id)
+        INSERT INTO OrderDeliveries (order_id, order_time, delivery_address, payment_method, customer_id)
+        VALUES (:order_id, :order_time, :delivery_address, :payment_method, :customer_id)
     ''')
+
     # Get the current time using datetime.now()
+    current_time = datetime.now()
+
     with engine.connect() as connection:
         with connection.begin():
             # Step 1: Insert the main order into Orders table
@@ -70,22 +71,13 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
             # Step 3: Insert into the OrderDeliveries table without specifying cancellable_until
             connection.execute(delivery_query, {
                 'order_id': order_id,
+                'order_time': current_time,  # Pass the current time as order_time
                 'delivery_address': delivery_address,
                 'payment_method': payment_method,
                 'customer_id': customer_id
             })
 
     return order_id
-
-def take_order(take_away, total_amount, order_status, discount, payed):
-    customer_id = get_customer_id()
-    query = text('''
-        INSERT INTO orders (CustomerID, TakeAway, TotalAmount, OrderStatus, Discount, Payed)
-        VALUES (:customer_id, :take_away, :total_amount, :order_status, :discount, :payed)
-    ''')
-
-    with engine.connect() as connection:
-        connection.execute(query, customer_id=customer_id, take_away=take_away, total_amount=total_amount, order_status=order_status, discount=discount, payed=payed)
 
 def cancel_latest_order():
     customer_id = get_customer_id()
@@ -130,10 +122,11 @@ def cancel_latest_order():
 def check_latest_order_status():
     customer_id = get_customer_id()
     query = text('''
-        SELECT order_id, delivery_status, order_time, cancellable_until
-        FROM OrderDeliveries
-        WHERE customer_id = :customer_id
-        ORDER BY order_time DESC
+        SELECT od.order_id, od.order_time, od.cancellable_until, o.OrderStatus
+        FROM OrderDeliveries od
+        JOIN Orders o ON od.order_id = o.OrderID
+        WHERE od.customer_id = :customer_id
+        ORDER BY od.order_time DESC
         LIMIT 1
     ''')
 
@@ -145,11 +138,36 @@ def check_latest_order_status():
             return "No orders found for this customer."
 
         order_id = order.order_id
-        status = order.delivery_status
         order_time = order.order_time
         cancellable_until = order.cancellable_until
+        order_status = order.OrderStatus
+
+        # Calculate the elapsed time since order_time
+        current_time = datetime.now()
+        elapsed_time = current_time - order_time
+
+        # Determine if order_status needs to be updated
+        if elapsed_time >= timedelta(minutes=30) and order_status != 'Done':
+            # Update order_status to 'Done'
+            update_query = text('''
+                UPDATE Orders
+                SET OrderStatus = 'Done'
+                WHERE OrderID = :order_id
+            ''')
+            connection.execute(update_query, {'order_id': order_id})
+            order_status = 'Done'
+
+        elif elapsed_time >= timedelta(minutes=7) and order_status != 'Out For Delivery':
+            # Update order_status to 'Out For Delivery'
+            update_query = text('''
+                UPDATE Orders
+                SET OrderStatus = 'Out For Delivery'
+                WHERE OrderID = :order_id
+            ''')
+            connection.execute(update_query, {'order_id': order_id})
+            order_status = 'Out For Delivery'
 
         return (f"Order ID: {order_id}\n"
-                f"Order Status: {status}\n"
+                f"Order Status: {order_status}\n"
                 f"Order Time: {order_time}\n"
                 f"Cancelable Until: {cancellable_until}")
