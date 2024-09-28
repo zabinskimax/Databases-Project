@@ -9,15 +9,21 @@ from app.database.database import get_engine
 engine = get_engine()
 
 
-def get_pizza_id(pizza_type, size):
+def get_pizza_id(pizza_type):
     query = text('''
-        SELECT PizzaID FROM Pizza
-        WHERE Type = :pizza_type AND Size = :size
+        SELECT pt.PizzaTypeID
+        FROM PizzaType pt
+        WHERE pt.Type = :pizza_type
     ''')
+
     with engine.connect() as connection:
-        result = connection.execute(query, {'pizza_type': pizza_type, 'size': size})
-        pizza = result.fetchone()
-        return pizza.PizzaID if pizza else None
+        result = connection.execute(query, {'pizza_type': pizza_type})
+        pizza_type_id = result.scalar()
+
+    if pizza_type_id:
+        return pizza_type_id
+    else:
+        return None
 
 def get_drink_id(drink_name, size):
     query = text('''
@@ -78,14 +84,31 @@ def get_pizza_info():
         return result.fetchall()
 
 def get_pizza_types():
-    pizzas= get_pizza_info()
-    pizza_types = {pizza[1] for pizza in pizzas}
+    query = text('''
+        SELECT DISTINCT Type
+        FROM PizzaType
+    ''')
+
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        pizza_types = {row[0] for row in result.fetchall()}
+
     return list(pizza_types)
 
+
 def get_pizza_ingredients():
-    ingredients = get_pizza_info()
-    ingredient_types = {pizza[6] for pizza in ingredients}
-    return ingredient_types
+    query = text('''
+        SELECT DISTINCT i.Name
+        FROM Ingredient i
+        JOIN PizzaIngredients pi ON i.IngredientID = pi.IngredientID
+        JOIN PizzaType pt ON pi.PizzaTypeID = pt.PizzaTypeID
+    ''')
+
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        ingredient_types = {row[0] for row in result.fetchall()}
+
+    return list(ingredient_types)
 
 def get_drinks_info():
     query = text('''
@@ -124,73 +147,86 @@ def get_ingredients_types():
     ingredient_types = {ingredients[3] for ingredients in ingredients}
     return list(ingredient_types)
 
+
 def get_ingredient_details(food_type, category):
     if category == "Pizza":
-        # For pizzas, we need to join the Pizza and Ingredient tables
-        pizza_query = text('''
-            SELECT * FROM Pizza
-            WHERE Type = :food_type
+        # For pizzas, we need to join the PizzaType, PizzaIngredients, and Ingredient tables
+        ingredient_query = text('''
+            SELECT i.Name
+            FROM PizzaType pt
+            JOIN PizzaIngredients pi ON pt.PizzaTypeID = pi.PizzaTypeID
+            JOIN Ingredient i ON pi.IngredientID = i.IngredientID
+            WHERE pt.Type = :food_type
         ''')
         with engine.connect() as connection:
             with connection.begin() as transaction:
-                result = connection.execute(pizza_query, {'food_type': food_type})
-                pizza_ingredients = result.fetchone()
+                result = connection.execute(ingredient_query, {'food_type': food_type})
+                pizza_ingredients = result.fetchall()
 
                 if pizza_ingredients:
-                    return pizza_ingredients[6]
+                    # Extract just the ingredient names
+                    ingredient_names = [ingredient[0] for ingredient in pizza_ingredients]
+                    return ingredient_names
                 else:
                     return "No information available."
 
+    return "Category not supported."
 
-def get_ingredient_from_ids(ids):
-    # If ids are passed as a string like "[1,2,3,34]", clean it up
-    if isinstance(ids, str):
-        # Use regex to extract all numbers from the string
-        ids = re.findall(r'\d+', ids)
-        ids = [int(i) for i in ids]  # Convert extracted numbers to integers
-
-    ingredients = []
-    for id1 in ids:
-        query = text('''
-                        SELECT * FROM Ingredient
-                        WHERE IngredientID = :id
-                        ''')
-        with engine.connect() as connection:
-            result = connection.execute(query, {'id': id1})
-            ingredient = result.fetchone()
-            if ingredient:
-                ingredients.append(ingredient[3])  # Assuming the name is at index 3
-    return ingredients
 
 def check_price(category, item_name, item_size):
     if category == "Pizza":
+        # Query to sum the price of ingredients for a specific pizza type
         query = text('''
-            SELECT * FROM Pizza
-            WHERE Type = :item_name
-            AND Size = :item_size
+            SELECT SUM(i.PricePerUnit) AS total_ingredient_price
+            FROM PizzaType pt
+            JOIN PizzaIngredients pi ON pt.PizzaTypeID = pi.PizzaTypeID
+            JOIN Ingredient i ON pi.IngredientID = i.IngredientID
+            WHERE pt.Type = :item_name
         ''')
+
+        size_multiplier = {
+            "Small": 1.0,
+            "Medium": 1.5,
+            "Large": 2.0
+        }
+
+        base_price = 7.0  # The base price for all pizzas
+
+        with engine.connect() as connection:
+            with connection.begin() as transaction:
+                result = connection.execute(query, {"item_name": item_name})
+                total_ingredient_price = result.scalar()
+
+                if total_ingredient_price is not None:
+                    # Add the base price to the total ingredient price
+                    total_price = base_price + float(total_ingredient_price)
+
+                    # Apply the size multiplier to the base ingredient price
+                    pizza_price = total_price * size_multiplier.get(item_size, 1.0)
+                    return pizza_price
+
     elif category == "Drink":
         query = text('''
-            SELECT * FROM Drink
+            SELECT Price FROM Drink
             WHERE Name = :item_name
             AND Size = :item_size
         ''')
-    elif category == "Dessert":
-        query = text('''
-            SELECT * FROM Dessert
-            WHERE Type = :item_name
-        ''')
-    else:
-        return 0
-
-    with engine.connect() as connection:
-        with connection.begin() as transaction:
+        with engine.connect() as connection:
             result = connection.execute(query, {"item_name": item_name, "item_size": item_size})
             price = result.fetchone()
-            print(price)
-            print(query)
             if price:
-                return price[2]
+                return price[0]
+
+    elif category == "Dessert":
+        query = text('''
+            SELECT Price FROM Dessert
+            WHERE Type = :item_name
+        ''')
+        with engine.connect() as connection:
+            result = connection.execute(query, {"item_name": item_name})
+            price = result.fetchone()
+            if price:
+                return price[0]
 
     return 0
 
