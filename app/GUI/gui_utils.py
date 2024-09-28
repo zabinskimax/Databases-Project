@@ -15,8 +15,15 @@ def confirm_order(root, controller, order_details, total_price, delivery_postal_
     discount = 0  # Assuming no discount for now
     payed = 0  # Assuming not paid yet
 
+
+
     if not delivery_postal_code:
         messagebox.showerror("Error", "Please enter a delivery postal code.")
+        return
+
+    postal_code = int(delivery_postal_code)  # Convert to integer
+    if postal_code > 1009 or postal_code < 1000:
+        messagebox.showerror("Error", "Please enter a valid delivery postal code between 1000 and 1009.")
         return
 
     if not delivery_address:
@@ -42,7 +49,7 @@ def confirm_order(root, controller, order_details, total_price, delivery_postal_
 
     if order_id:
         # Assign a delivery person after the order is inserted
-        designated_area = "North District"  # You might need to define how to determine the designated area
+        designated_area = delivery_postal_code # You might need to define how to determine the designated area
         delivery_person = assign_delivery(designated_area)
 
         if delivery_person:

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
-
+import random
+import re
 
 from app.GUI.gui_utils import clear_screen, confirm_order
 from app.database.discount_management import check_if_discount
@@ -25,17 +26,21 @@ def checkout_screen(root, order_details, controller):
     label = tk.Label(root, text="Checkout", font=("Helvetica", 16))
     label.pack(pady=10)
 
+    random_postal_code = random.randint(1000, 1009)
     # Postal Code
     postal_code_label = tk.Label(root, text="Postal Code:")
     postal_code_label.pack(pady=5)
     postal_code_entry = tk.Entry(root, width=20)
     postal_code_entry.pack(pady=5)
+    postal_code_entry.insert(0, str(random_postal_code))
 
+    random_address = random.randint(1, 1000)
     # Delivery Address
     address_label = tk.Label(root, text="Delivery Address:")
     address_label.pack(pady=5)
     address_entry = tk.Entry(root, width=50)
     address_entry.pack(pady=5)
+    address_entry.insert(0, str(random_address))
 
     # Payment Method
     payment_label = tk.Label(root, text="Payment Method:")
@@ -142,12 +147,16 @@ def checkout_screen(root, order_details, controller):
 
     # Add a "Confirm Order" button
     confirm_button = tk.Button(button_frame, text="Confirm Order",
-                               command=lambda: confirm_order(root, controller, order_details, total_price, postal_code_entry.get(), address_entry.get(), payment_var.get()))
+                               command=lambda: confirm_order(root, controller, order_details, total_price, get_numeric_postal_code(), address_entry.get(), payment_var.get()))
     confirm_button.pack(side=tk.LEFT, padx=5)
 
     # Add a "Back to Menu" button
     back_button = tk.Button(button_frame, text="Back to Menu", command=lambda: controller.show_main_menu_screen())
     back_button.pack(side=tk.LEFT, padx=5)
+
+    def get_numeric_postal_code():
+        # Extract only the digits from the postal code entry
+        return ''.join(filter(str.isdigit, postal_code_entry.get()))
 
 def calculate_discount(total_price):
     if check_if_discount():

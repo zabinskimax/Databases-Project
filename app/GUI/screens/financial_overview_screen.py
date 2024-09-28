@@ -3,6 +3,7 @@ from tkinter import ttk
 from app.GUI.gui_utils import clear_screen
 from app.database.database import get_engine
 from sqlalchemy import text
+from tkcalendar import DateEntry  # Make sure to install tkcalendar if you haven't
 
 # Assuming the engine is correctly set up for your database
 engine = get_engine()
@@ -39,58 +40,52 @@ def financial_overview_screen(root, controller):
     filter_frame.pack(pady=10, fill="x")
 
     # Initial sorting options
-    filter_options = ["All orders", "Discounted", "Takeaway", "Received in person"]
-    filter_options_postal = ["All postal codes", "North", "South", "East", "West"]
+    filter_options = ["All orders", "Discounted", "Not discounted"]
+    postal_code_options = [str(code) for code in range(1000, 1010)]  # Postal codes 1000-1009
 
     # Lists to hold references to dropdowns
-    dropdowns = []  # For order filters
+    discount_dropdowns = []  # For order filters
     postal_dropdowns = []  # For postal code filters
 
-    # Function to add a new sorting dropdown
-    def add_filter_dropdown():
-        dropdown = ttk.Combobox(filter_frame, values=filter_options)
-        dropdown.current(0)  # Default to "All orders"
-        dropdown.pack(side="left", padx=5)
-        dropdowns.append(dropdown)  # Store reference for removal
-        update_apply_button_state()  # Update button state
+    def add_discount_dropdown():
+        """ Adds a dropdown for filtering by order types """
+        filter_var = tk.StringVar(value="All orders")
+        discount_dropdown = ttk.Combobox(filter_frame, textvariable=filter_var, values=filter_options, state="readonly")
+        discount_dropdown.pack(side="left", padx=10)
+        discount_dropdowns.append(filter_var)
 
-    # Function to add a new postal code dropdown
     def add_postal_filter_dropdown():
-        dropdown = ttk.Combobox(filter_frame, values=filter_options_postal)
-        dropdown.current(0)  # Default to "All postal codes"
-        dropdown.pack(side="left", padx=5)
-        postal_dropdowns.append(dropdown)  # Store reference for removal
-        update_apply_button_state()  # Update button state
+        """ Adds a dropdown for filtering by postal codes """
+        postal_var = tk.StringVar(value="All postal codes")
+        postal_dropdown = ttk.Combobox(filter_frame, textvariable=postal_var,
+                                       values=["All postal codes"] + postal_code_options, state="readonly")
+        postal_dropdown.pack(side="left", padx=10)
+        postal_dropdowns.append(postal_var)
 
-    # Function to remove the last sorting dropdown
-    def remove_filter_dropdown():
-        if dropdowns:
-            dropdowns[-1].destroy()  # Remove the last dropdown
-            dropdowns.pop()  # Remove from the list
-            update_apply_button_state()  # Update button state
+    def add_date_filter():
+        """ Adds entry fields for filtering by date range """
+        date_frame = tk.Frame(filter_frame)
+        date_frame.pack(side="left", padx=10)
 
-    # Function to remove the last postal filter dropdown
-    def remove_postal_filter_dropdown():
-        if postal_dropdowns:
-            postal_dropdowns[-1].destroy()  # Remove the last postal dropdown
-            postal_dropdowns.pop()  # Remove from the list
-            update_apply_button_state()  # Update button state
+        start_date_label = tk.Label(date_frame, text="Start Date:")
+        start_date_label.pack(side="left")
 
-    # Button to add a sorting dropdown
-    add_button = tk.Button(filter_frame, text="Add order filter", command=add_filter_dropdown)
-    add_button.pack(side="right", padx=5)
+        # Set default start date to January 1, 2000
+        start_date_entry = DateEntry(date_frame, width=12, background='darkblue',
+                                     foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
+                                     year=2000, month=1, day=1)
+        start_date_entry.pack(side="left", padx=5)
 
-    # Button to add a postal filter dropdown
-    add_postal_button = tk.Button(filter_frame, text="Add postal filter", command=add_postal_filter_dropdown)
-    add_postal_button.pack(side="right", padx=5)
+        end_date_label = tk.Label(date_frame, text="End Date:")
+        end_date_label.pack(side="left")
+        end_date_entry = DateEntry(date_frame, width=12, background='darkblue',
+                                   foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
+        end_date_entry.pack(side="left", padx=5)
 
-    # Button to remove a sorting dropdown
-    remove_button = tk.Button(filter_frame, text="Remove filter", command=remove_filter_dropdown)
-    remove_button.pack(side="right", padx=5)
+        return start_date_entry, end_date_entry
 
-    # Button to remove a postal filter dropdown
-    remove_postal_button = tk.Button(filter_frame, text="Remove postal filter", command=remove_postal_filter_dropdown)
-    remove_postal_button.pack(side="right", padx=5)
+    # Create date filter entries
+    start_date_entry, end_date_entry = add_date_filter()
 
     # Button to apply the filters
     def apply_filters():
@@ -111,33 +106,42 @@ def financial_overview_screen(root, controller):
 
     def apply_query(frame):
         """ Query database based on the selected filters """
-        query_base = "SELECT TakeAway, TotalAmount, Discount FROM Orders WHERE 1=1"
+        query_base = """
+        SELECT O.TakeAway, O.TotalAmount, O.Discount, D.delivery_postal_code
+        FROM Orders O
+        LEFT JOIN OrderDeliveries D ON O.OrderID = D.order_id
+        WHERE 1=1
+        """
+
         conditions = []
         params = {}
 
         # Check each dropdown for sorting conditions
-        for dropdown in dropdowns:
-            selected_filter = dropdown.get()
+        for discount_dropdown in discount_dropdowns:
+            selected_filter = discount_dropdown.get()
             if selected_filter == "Discounted":
-                conditions.append("Discount > 0")
-            elif selected_filter == "Takeaway":
-                conditions.append("TakeAway = :takeaway")
-                params['takeaway'] = 1  # TakeAway is 1 for Yes
-            elif selected_filter == "Received in person":
-                conditions.append("TakeAway = :takeaway")
-                params['takeaway'] = 0  # TakeAway is 0 for No
+                conditions.append("O.Discount > 0")
+            elif selected_filter == "Not discounted":
+                conditions.append("O.Discount = 0")
 
-        # Check postal dropdowns for postal conditions
+        # Check postal code dropdowns for postal code filters
         for postal_dropdown in postal_dropdowns:
-            selected_postal_filter = postal_dropdown.get()
-            if selected_postal_filter == "North":
-                conditions.append("PostalCode IN (SELECT PostalCode FROM PostalRegions WHERE Region = 'North')")
-            elif selected_postal_filter == "South":
-                conditions.append("PostalCode IN (SELECT PostalCode FROM PostalRegions WHERE Region = 'South')")
-            elif selected_postal_filter == "East":
-                conditions.append("PostalCode IN (SELECT PostalCode FROM PostalRegions WHERE Region = 'East')")
-            elif selected_postal_filter == "West":
-                conditions.append("PostalCode IN (SELECT PostalCode FROM PostalRegions WHERE Region = 'West')")
+            selected_postal = postal_dropdown.get()
+            if selected_postal != "All postal codes":
+                conditions.append("D.delivery_postal_code = :postal_code")
+                params['postal_code'] = selected_postal
+
+        # Get date range values
+        start_date = start_date_entry.get()
+        end_date = end_date_entry.get()
+
+        # Add date conditions if specified
+        if start_date:
+            conditions.append("D.order_time >= :start_date")
+            params['start_date'] = f"{start_date} 00:00:00"  # Starting from the beginning of the day
+        if end_date:
+            conditions.append("D.order_time <= :end_date")
+            params['end_date'] = f"{end_date} 23:59:59"  # Ending at the end of the day
 
         # Combine conditions using AND
         if conditions:
@@ -150,27 +154,41 @@ def financial_overview_screen(root, controller):
             result = connection.execute(query, params)
             orders = result.fetchall()
 
-        # Display orders based on query result
-        clear_orders(frame)  # Clear existing displayed orders
+        # Clear existing displayed orders
+        clear_orders(frame)
+
+        # Initialize total sum variable
+        total_sum = 0
+
         if not orders:
             no_orders_label = tk.Label(frame, text="No orders found.")
             no_orders_label.pack(pady=10)
         else:
+            # Display the total sum label above orders
+            total_label = tk.Label(frame, text="Total Sum: $0.00", font=("Helvetica", 14, "bold"))
+            total_label.pack(pady=10)
+
             for order in orders:
                 takeaway = "Yes" if order.TakeAway else "No"
                 total_amount = order.TotalAmount
                 discount = order.Discount
+                postal_code = order.delivery_postal_code
 
                 order_label = tk.Label(frame,
-                                       text=f"TakeAway: {takeaway}, Total: ${total_amount}, Discount: {discount}%")
+                                       text=f"TakeAway: {takeaway}, Total: ${total_amount}, Discount: {discount}%, Postal Code: {postal_code}")
                 order_label.pack(pady=5)
+
+                total_sum += total_amount  # Accumulate total amount
+
+            # Update the total sum label with the calculated sum
+            total_label.config(text=f"Total Sum: ${total_sum:.2f}")
 
     def update_apply_button_state():
         """ Enable or disable the apply button based on the presence of dropdowns """
-        apply_button.config(state=tk.NORMAL if dropdowns or postal_dropdowns else tk.DISABLED)
+        apply_button.config(state=tk.NORMAL if discount_dropdowns or postal_dropdowns else tk.DISABLED)
 
     # Add initial sorting dropdown
-    add_filter_dropdown()  # Start with one order dropdown
+    add_discount_dropdown()  # Start with one order dropdown
     add_postal_filter_dropdown()  # Start with one postal dropdown
 
     # Add mousewheel scrolling (optional)
@@ -179,3 +197,5 @@ def financial_overview_screen(root, controller):
 
     # Show all orders initially without filters applied
     apply_query(order_list_frame)
+
+# Don't forget to include a call to the financial_overview_screen somewhere in your main application code
