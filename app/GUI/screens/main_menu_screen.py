@@ -3,8 +3,7 @@ import tkinter.ttk as ttk
 from tkinter import messagebox
 
 from app.GUI.gui_utils import clear_screen
-from app.database.queries import get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, \
-    get_ingredient_from_ids, check_price, check_if_birthday
+from app.database.queries import get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, check_price, check_if_birthday
 
 # Track if the free pizza and drink have been applied
 free_pizza_applied = tk.BooleanVar(value=False)
@@ -66,9 +65,9 @@ def main_menu_screen(root, controller):
 
     def show_info(food_type, category):
         if category == "Pizza":
-            ingredient_ids = get_ingredient_details(food_type, category)
-            info = get_ingredient_from_ids(ingredient_ids)
-            messagebox.showinfo("Ingredient Information", info)
+            ingredients = get_ingredient_details(food_type, category)
+
+            messagebox.showinfo("Ingredient Information", ingredients)
     def add_combobox():
         order_frame = tk.Frame(combobox_frame)
         order_frame.pack(pady=5, anchor="w")

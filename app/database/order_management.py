@@ -52,7 +52,7 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
             # Step 2: Insert each item into the OrderItems table
             for item in order_details:
                 if item['category'] == 'Pizza':
-                    item_id = get_pizza_id(item['item'], item['size'])
+                    item_id = get_pizza_id(item['item'])
                     item_type = 'Pizza'
                 elif item['category'] == 'Drink':
                     item_id = get_drink_id(item['item'], item['size'])
@@ -84,13 +84,15 @@ def insert_order(takeaway, total_amount, order_status, discount, payed, order_de
     add_an_order_to_order_sum()
     return order_id
 
+
 def cancel_latest_order():
     customer_id = get_customer_id()
     query = text('''
-        SELECT order_id, cancellable_until, delivery_status
-        FROM OrderDeliveries
-        WHERE customer_id = :customer_id
-        ORDER BY order_time DESC
+        SELECT od.order_id, od.cancellable_until, o.OrderStatus
+        FROM OrderDeliveries od
+        JOIN Orders o ON od.order_id = o.OrderID
+        WHERE od.customer_id = :customer_id
+        ORDER BY od.order_time DESC
         LIMIT 1
     ''')
 
@@ -103,26 +105,34 @@ def cancel_latest_order():
 
         order_id = order.order_id
         cancellable_until = order.cancellable_until + timedelta(hours=2)
-        delivery_status = order.delivery_status
+        order_status = order.OrderStatus
 
         current_time = datetime.now()
         if current_time > cancellable_until:
-            print(current_time)
-            print(cancellable_until)
             return "Cancellation period has expired."
 
-        if delivery_status not in ['Being Prepared', 'Ready for Pickup']:
+        if order_status not in ['Being Prepared', 'Ready for Pickup']:
             return "Order cannot be canceled as it is already being delivered or completed."
 
         # Cancel the order
         cancel_query = text('''
             UPDATE OrderDeliveries
-            SET cancellation_status = 1, delivery_status = 'Cancelled'
+            SET cancellation_status = 1
             WHERE order_id = :order_id
         ''')
 
+        order_status_update_query = text('''
+            UPDATE Orders
+            SET OrderStatus = 'Cancelled'
+            WHERE OrderID = :order_id
+        ''')
+
+        # No need to start a new transaction if already in one
         connection.execute(cancel_query, {'order_id': order_id})
+        connection.execute(order_status_update_query, {'order_id': order_id})
+
         return "Your order has been successfully canceled."
+
 
 def check_latest_order_status():
     customer_id = get_customer_id()
@@ -173,6 +183,6 @@ def check_latest_order_status():
             order_status = 'Out For Delivery'
 
         return (f"Order ID: {order_id}\n"
-                f"Order Status: {status}\n"
+                f"Order Status: {order_status}\n"  # Corrected variable name
                 f"Order Time: {order_time}\n"
                 f"Cancelable Until: {cancellable_until}")
