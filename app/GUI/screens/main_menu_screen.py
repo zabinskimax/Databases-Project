@@ -68,9 +68,14 @@ def main_menu_screen(root, controller):
             ingredients = get_ingredient_details(food_type, category)
 
             messagebox.showinfo("Ingredient Information", ingredients)
+
     def add_combobox():
         order_frame = tk.Frame(combobox_frame)
         order_frame.pack(pady=5, anchor="w")
+
+        # Create a dictionary to hold the order details for this row
+        row_order_details = {'category': None, 'item': None, 'size': None, 'price': 0.0}
+        order_details.append(row_order_details)  # Add it to the global order_details list
 
         category_combobox = ttk.Combobox(order_frame, values=order_options)
         category_combobox.pack(side="left", padx=5)
@@ -87,7 +92,8 @@ def main_menu_screen(root, controller):
         price_label = tk.Label(order_frame, text="Price: $0.00", width=12)
         price_label.pack(side="left", padx=5)
 
-        remove_button = tk.Button(order_frame, text="Remove", command=lambda: remove_combobox(order_frame))
+        remove_button = tk.Button(order_frame, text="Remove",
+                                  command=lambda: remove_combobox(order_frame, row_order_details))
         remove_button.pack(side="left", padx=5)
 
         def on_info_click():
@@ -98,14 +104,12 @@ def main_menu_screen(root, controller):
         info_button = tk.Button(order_frame, text="Info", command=on_info_click)
         info_button.pack(side="left", padx=5)
         info_button.pack_forget()  # Initially hide the info button
-        def update_price_for_desserts():
-            if category_combobox.get()== 'Dessert':
-                update_price()
+
         def update_price():
             selected_food = food_type_combobox.get()
             selected_size = size_combobox.get()
             category = category_combobox.get()
-            # Check if the customer is eligible for a free pizza or drink
+
             if check_if_birthday():
                 if category == "Pizza" and not free_pizza_applied.get():
                     item_price_float = 0.0
@@ -120,35 +124,18 @@ def main_menu_screen(root, controller):
                 item_price = check_price(category, selected_food, selected_size)
                 item_price_float = float(item_price) if item_price is not None else 0.0
 
-                # Check if this item is already in the order
-                existing_item = next(
-                    (item for item in order_details if item['category'] == category and item['item'] == selected_food),
-                    None)
+            # Update the specific row in the order_details list
+            row_order_details['category'] = category
+            row_order_details['item'] = selected_food
+            row_order_details['size'] = selected_size
+            row_order_details['price'] = item_price_float
 
-                if existing_item:
-                    # If the item already exists, update its price and size
-                    current_total = total_price.get()
-                    current_total -= existing_item['price']  # Subtract the old price
-                    new_total = current_total + item_price_float  # Add the new price
-                    total_price.set(new_total)
-                    total_price_label.config(text=f"Total Price: ${new_total:.2f}")
+            # Update the price label in the UI
+            price_label.config(text=f"Price: ${item_price_float:.2f}")
 
-                    existing_item['size'] = selected_size
-                    existing_item['price'] = item_price_float
-                else:
-                    # If the item is new, add it to the order
-                    current_total = total_price.get()
-                    new_total = current_total + item_price_float
-                    total_price.set(new_total)
-                    total_price_label.config(text=f"Total Price: ${new_total:.2f}")
-
-                    order_details.append({
-                        'category': category,
-                        'item': selected_food,
-                        'size': selected_size,
-                        'price': item_price_float
-                    })
-                price_label.config(text=f"Price: ${item_price_float:.2f}")
+            # Recalculate the total price
+            total_price.set(sum(item['price'] for item in order_details))
+            total_price_label.config(text=f"Total Price: ${total_price.get():.2f}")
 
         def on_category_selected(event):
             category = category_combobox.get()
@@ -156,10 +143,12 @@ def main_menu_screen(root, controller):
             food_type_combobox.set("Select food type")
             size_combobox['values'] = size_options.get(category, [])
             size_combobox.set("")
+
             if category == "Pizza":
                 info_button.pack(side="left", padx=5)
             else:
                 info_button.pack_forget()
+
             if category == "Dessert":
                 size_combobox.pack_forget()
             else:
@@ -168,26 +157,16 @@ def main_menu_screen(root, controller):
                 size_combobox.set("")
 
         category_combobox.bind('<<ComboboxSelected>>', on_category_selected)
-
-        food_type_combobox.bind('<<ComboboxSelected>>', lambda event: update_price_for_desserts())
+        food_type_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
         size_combobox.bind('<<ComboboxSelected>>', lambda event: update_price())
 
-    def remove_combobox(frame):
-        # Get the price of the item being removed
-        price_label = frame.winfo_children()[3]  # Assuming the price label is the 4th child of the frame
-        item_price = float(price_label.cget("text").split("$")[1])
+    def remove_combobox(frame, row_order_details):
+        # Remove the item from the global order_details list
+        order_details.remove(row_order_details)
 
-        # Update total price
-        current_total = total_price.get()
-        new_total = current_total - item_price
-        total_price.set(new_total)
-        total_price_label.config(text=f"Total Price: ${new_total:.2f}")
-
-        # Remove the item from order details
-        for item in order_details:
-            if item['price'] == item_price:
-                order_details.remove(item)
-                break
+        # Recalculate the total price based on remaining items
+        total_price.set(sum(item['price'] for item in order_details))
+        total_price_label.config(text=f"Total Price: ${total_price.get():.2f}")
 
         frame.destroy()
 
