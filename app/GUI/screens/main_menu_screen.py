@@ -3,7 +3,8 @@ import tkinter.ttk as ttk
 from tkinter import messagebox
 
 from app.GUI.gui_utils import clear_screen
-from app.database.queries import get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, check_price, check_if_birthday
+from app.database.queries import get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, \
+     check_if_birthday, get_pizza_ingredients, check_price_with_details
 
 # Track if the free pizza and drink have been applied
 free_pizza_applied = tk.BooleanVar(value=False)
@@ -63,12 +64,33 @@ def main_menu_screen(root, controller):
             size_combobox['values'] = size_options[category]
             size_combobox.set("Select size")
 
-    def show_info(food_type, category):
+    def show_info(food_type, category, size=None):
         if category == "Pizza":
-            ingredients = get_ingredient_details(food_type, category)
+            # Get the ingredient details, vegetarian, and vegan status
+            ingredients, is_vegetarian, is_vegan = get_pizza_ingredients(food_type)
 
-            messagebox.showinfo("Ingredient Information", ingredients)
+            # Get the price of the pizza based on its size
+            if size:
+                pizza_price, detailed_price_info = check_price_with_details(category, food_type, size, detailed=True)
+            else:
+                pizza_price, detailed_price_info = check_price_with_details(category, food_type,
+                                                                            "Small", detailed=True)  # Default to "Small" if no size selected
 
+            # Create the message to display
+            message = f"Ingredients and Costs:\n{detailed_price_info}\n"
+
+            if is_vegan:
+                message += "This pizza is Vegan.\n"
+            elif is_vegetarian:
+                message += "This pizza is Vegetarian.\n"
+            else:
+                message += "This pizza contains non-vegetarian ingredients.\n"
+
+            # Add the total price details
+            message += f"\nTotal Price for {size or 'Small'} size: ${pizza_price:.2f}"
+
+            # Display the information
+            messagebox.showinfo("Pizza Information", message)
     def add_combobox():
         order_frame = tk.Frame(combobox_frame)
         order_frame.pack(pady=5, anchor="w")
@@ -99,7 +121,8 @@ def main_menu_screen(root, controller):
         def on_info_click():
             food_type = food_type_combobox.get()
             category = category_combobox.get()
-            show_info(food_type, category)
+            size = size_combobox.get()
+            show_info(food_type, category, size)
 
         info_button = tk.Button(order_frame, text="Info", command=on_info_click)
         info_button.pack(side="left", padx=5)
@@ -118,10 +141,10 @@ def main_menu_screen(root, controller):
                     item_price_float = 0.0
                     free_drink_applied.set(True)
                 else:
-                    item_price = check_price(category, selected_food, selected_size)
+                    item_price = check_price_with_details(category, selected_food, selected_size)
                     item_price_float = float(item_price) if item_price is not None else 0.0
             else:
-                item_price = check_price(category, selected_food, selected_size)
+                item_price = check_price_with_details(category, selected_food, selected_size)
                 item_price_float = float(item_price) if item_price is not None else 0.0
 
             # Update the specific row in the order_details list
