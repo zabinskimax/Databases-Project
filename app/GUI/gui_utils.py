@@ -50,12 +50,12 @@ def confirm_order(root, controller, order_details, total_price, delivery_postal_
     if order_id:
         # Assign a delivery person after the order is inserted
         designated_area = delivery_postal_code # You might need to define how to determine the designated area
-        delivery_person = assign_delivery(designated_area)
+        #delivery_person = assign_delivery(designated_area)
 
-        if delivery_person:
-            delivery_person_name = delivery_person.driver_name
-        else:
-            delivery_person_name = "No available delivery person"
+        # if delivery_person:
+        #     delivery_person_name = delivery_person.driver_name
+        # else:
+        #     delivery_person_name = "No available delivery person"
 
         # Create the order summary
         order_summary = "Order Summary:\n\n"
@@ -69,7 +69,7 @@ def confirm_order(root, controller, order_details, total_price, delivery_postal_
         order_summary += f"\nDelivery Postal Code: {delivery_postal_code}"
         order_summary += f"\nDelivery Address: {delivery_address}"
         order_summary += f"\nPayment Method: {payment_method}"
-        order_summary += f"\nAssigned Delivery Person: {delivery_person_name}"
+        #order_summary += f"\nAssigned Delivery Person: {delivery_person_name}"
 
         messagebox.showinfo("Order Confirmed", f"Your order (ID: {order_id}) has been placed!\n\n{order_summary}")
     else:

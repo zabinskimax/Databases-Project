@@ -4,6 +4,7 @@ from sqlalchemy import text
 from datetime import datetime, timedelta
 from app.database.account_management import get_customer_id
 from app.database.database import get_engine
+from app.database.delivery_management import assign_delivery_to_grouped_orders
 from app.database.discount_management import add_an_order_to_order_sum
 from app.database.queries import get_pizza_id, get_drink_id, get_dessert_id
 
@@ -137,13 +138,13 @@ def cancel_latest_order():
 def check_latest_order_status():
     customer_id = get_customer_id()
     query = text('''
-        SELECT od.order_id, od.order_time, od.cancellable_until, o.OrderStatus
-        FROM OrderDeliveries od
-        JOIN Orders o ON od.order_id = o.OrderID
-        WHERE od.customer_id = :customer_id
-        ORDER BY od.order_time DESC
-        LIMIT 1
-    ''')
+            SELECT od.order_id, od.order_time, od.cancellable_until, od.delivery_postal_code, od.delivery_person_id, o.OrderStatus
+            FROM OrderDeliveries od
+            JOIN Orders o ON od.order_id = o.OrderID
+            WHERE od.customer_id = :customer_id
+            ORDER BY od.order_time DESC
+            LIMIT 1
+        ''')
 
     with engine.connect() as connection:
         result = connection.execute(query, {'customer_id': customer_id})
@@ -156,6 +157,8 @@ def check_latest_order_status():
         order_time = order.order_time
         cancellable_until = order.cancellable_until
         order_status = order.OrderStatus
+        postal_code = order.delivery_postal_code
+        delivery_person_id = order.delivery_person_id
 
         # Calculate the elapsed time since order_time
         current_time = datetime.now()
@@ -181,8 +184,28 @@ def check_latest_order_status():
             ''')
             connection.execute(update_query, {'order_id': order_id})
             order_status = 'Out For Delivery'
+        print(elapsed_time, '    ' , delivery_person_id)
+        # After 3 minutes, group orders with the same postal code
+        if elapsed_time >= timedelta(minutes=3) and ((delivery_person_id is None) or (delivery_person_id == 0)):
+            # Assign the same delivery person to other unassigned orders in the same postal code
+            assign_delivery_to_grouped_orders(order_id, postal_code)
+            # Get the delivery person name if assigned
+            delivery_person_name = "No delivery person assigned yet"
+            if delivery_person_id:
+                delivery_person_query = text('''
+                        SELECT driver_name 
+                        FROM DeliveryPerson
+                        WHERE delivery_person_id = :delivery_person_id
+                    ''')
+                delivery_person_result = connection.execute(delivery_person_query,
+                                                            {'delivery_person_id': delivery_person_id})
+                delivery_person = delivery_person_result.fetchone()
+
+                if delivery_person:
+                    delivery_person_name = delivery_person.driver_name
 
         return (f"Order ID: {order_id}\n"
                 f"Order Status: {order_status}\n"  # Corrected variable name
                 f"Order Time: {order_time}\n"
-                f"Cancelable Until: {cancellable_until}")
+                f"Cancelable Until: {cancellable_until}\n"
+                f"Delivery Person: {delivery_person_name}")
