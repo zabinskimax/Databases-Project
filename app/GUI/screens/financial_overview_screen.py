@@ -3,7 +3,8 @@ from tkinter import ttk
 from app.GUI.gui_utils import clear_screen
 from app.database.database import get_engine
 from sqlalchemy import text
-from tkcalendar import DateEntry  # Make sure to install tkcalendar if you haven't
+from tkcalendar import DateEntry
+from datetime import datetime
 
 # Assuming the engine is correctly set up for your database
 engine = get_engine()
@@ -39,41 +40,48 @@ def financial_overview_screen(root, controller):
     filter_frame = tk.Frame(content_frame)
     filter_frame.pack(pady=10, fill="x")
 
-    # Initial sorting options
+    # Dropdown menu options
     filter_options = ["All orders", "Discounted", "Not discounted"]
-    postal_code_options = [str(code) for code in range(1000, 1010)]  # Postal codes 1000-1009
+    postal_code_options = [str(code) for code in range(1000, 1010)]
+    age_group_options = ["All ages", "0-19", "20-29", "30-39", "40-49", "50-59", "60+"]
+    gender_options = ["All genders", "Male", "Female"]
 
     # Lists to hold references to dropdowns
-    discount_dropdowns = []  # For order filters
-    postal_dropdowns = []  # For postal code filters
+    discount_dropdowns = []
+    postal_dropdowns = []
+    gender_dropdowns = []
+
+    # Age group variable
+    age_group_var = tk.StringVar(value="All ages")
 
     def add_discount_dropdown():
-        """ Adds a dropdown for filtering by order types """
-        filter_var = tk.StringVar(value="All orders")
-        discount_dropdown = ttk.Combobox(filter_frame, textvariable=filter_var, values=filter_options, state="readonly")
+        discount_var = tk.StringVar(value="All orders")
+        discount_dropdown = ttk.Combobox(filter_frame, textvariable=discount_var, values=filter_options, state="readonly")
         discount_dropdown.pack(side="left", padx=10)
-        discount_dropdowns.append(filter_var)
+        discount_dropdowns.append(discount_var)
+
+    def add_gender_dropdown():
+        gender_var = tk.StringVar(value="All genders")
+        gender_dropdown = ttk.Combobox(filter_frame, textvariable=gender_var, values=gender_options, state="readonly")  # Added missing comma here
+        gender_dropdown.pack(side="left", padx=10)
+        gender_dropdowns.append(gender_var)
 
     def add_postal_filter_dropdown():
-        """ Adds a dropdown for filtering by postal codes """
         postal_var = tk.StringVar(value="All postal codes")
-        postal_dropdown = ttk.Combobox(filter_frame, textvariable=postal_var,
-                                       values=["All postal codes"] + postal_code_options, state="readonly")
+        postal_dropdown = ttk.Combobox(filter_frame, textvariable=postal_var, values=["All postal codes"] + postal_code_options, state="readonly")
         postal_dropdown.pack(side="left", padx=10)
         postal_dropdowns.append(postal_var)
 
     def add_date_filter():
-        """ Adds entry fields for filtering by date range """
         date_frame = tk.Frame(filter_frame)
         date_frame.pack(side="left", padx=10)
 
         start_date_label = tk.Label(date_frame, text="Start Date:")
         start_date_label.pack(side="left")
 
-        # Set default start date to January 1, 2000
         start_date_entry = DateEntry(date_frame, width=12, background='darkblue',
                                      foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
-                                     year=2000, month=1, day=1)
+                                     year=2024, month=1, day=1)
         start_date_entry.pack(side="left", padx=5)
 
         end_date_label = tk.Label(date_frame, text="End Date:")
@@ -86,6 +94,10 @@ def financial_overview_screen(root, controller):
 
     # Create date filter entries
     start_date_entry, end_date_entry = add_date_filter()
+
+    # Add age group filter dropdown
+    age_group_dropdown = ttk.Combobox(filter_frame, textvariable=age_group_var, values=age_group_options, state="readonly")
+    age_group_dropdown.pack(side="left", padx=10)
 
     # Button to apply the filters
     def apply_filters():
@@ -104,25 +116,39 @@ def financial_overview_screen(root, controller):
         for widget in frame.winfo_children():
             widget.destroy()
 
+    def calculate_age(birthdate):
+        """ Calculate age from birthdate """
+        today = datetime.today()
+        age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+        return age
+
     def apply_query(frame):
         """ Query database based on the selected filters """
         query_base = """
-        SELECT O.TakeAway, O.TotalAmount, O.Discount, D.delivery_postal_code
+        SELECT O.TakeAway, O.TotalAmount, O.Discount, D.delivery_postal_code, C.Birthdate, C.Gender
         FROM Orders O
         LEFT JOIN OrderDeliveries D ON O.OrderID = D.order_id
+        LEFT JOIN Customer C ON O.CustomerID = C.CustomerID
         WHERE 1=1
         """
 
         conditions = []
         params = {}
 
-        # Check each dropdown for sorting conditions
+        # Check discount dropdowns for sorting conditions
         for discount_dropdown in discount_dropdowns:
             selected_filter = discount_dropdown.get()
             if selected_filter == "Discounted":
                 conditions.append("O.Discount > 0")
             elif selected_filter == "Not discounted":
                 conditions.append("O.Discount = 0")
+
+        for gender_dropdown in gender_dropdowns:
+            selected_filter = gender_dropdown.get()
+            if selected_filter == "Male":
+                conditions.append("C.Gender = 'Male'")
+            elif selected_filter == "Female":
+                conditions.append("C.Gender = 'Female'")
 
         # Check postal code dropdowns for postal code filters
         for postal_dropdown in postal_dropdowns:
@@ -138,14 +164,30 @@ def financial_overview_screen(root, controller):
         # Add date conditions if specified
         if start_date:
             conditions.append("D.order_time >= :start_date")
-            params['start_date'] = f"{start_date} 00:00:00"  # Starting from the beginning of the day
+            params['start_date'] = f"{start_date} 00:00:00"
         if end_date:
             conditions.append("D.order_time <= :end_date")
-            params['end_date'] = f"{end_date} 23:59:59"  # Ending at the end of the day
+            params['end_date'] = f"{end_date} 23:59:59"
+
+        # Filter by age group
+        selected_age_group = age_group_var.get()
+        if selected_age_group != "All ages":
+            age_ranges = {
+                "0-19": (0, 19),
+                "20-29": (20, 29),
+                "30-39": (30, 39),
+                "40-49": (40, 49),
+                "50-59": (50, 59),
+                "60+": (60, 120)  # Assuming max age as 120
+            }
+            age_range = age_ranges[selected_age_group]
+            birthdate_lower = f"DATE_SUB(CURDATE(), INTERVAL {age_range[1]} YEAR)"
+            birthdate_upper = f"DATE_SUB(CURDATE(), INTERVAL {age_range[0]} YEAR)"
+            conditions.append("C.Birthdate BETWEEN " + birthdate_lower + " AND " + birthdate_upper)
 
         # Combine conditions using AND
         if conditions:
-            query_base += " AND " + " AND ".join(conditions)  # Use AND to combine conditions
+            query_base += " AND " + " AND ".join(conditions)
 
         query = text(query_base)
 
@@ -175,7 +217,7 @@ def financial_overview_screen(root, controller):
                 postal_code = order.delivery_postal_code
 
                 order_label = tk.Label(frame,
-                                       text=f"TakeAway: {takeaway}, Total: ${total_amount}, Discount: {discount}%, Postal Code: {postal_code}")
+                                       text=f"TakeAway: {takeaway}, Total: ${total_amount}, Discount: {discount}$, Postal Code: {postal_code}")
                 order_label.pack(pady=5)
 
                 total_sum += total_amount  # Accumulate total amount
@@ -183,13 +225,10 @@ def financial_overview_screen(root, controller):
             # Update the total sum label with the calculated sum
             total_label.config(text=f"Total Sum: ${total_sum:.2f}")
 
-    def update_apply_button_state():
-        """ Enable or disable the apply button based on the presence of dropdowns """
-        apply_button.config(state=tk.NORMAL if discount_dropdowns or postal_dropdowns else tk.DISABLED)
-
     # Add initial sorting dropdown
-    add_discount_dropdown()  # Start with one order dropdown
-    add_postal_filter_dropdown()  # Start with one postal dropdown
+    add_discount_dropdown()
+    add_gender_dropdown()
+    add_postal_filter_dropdown()
 
     # Add mousewheel scrolling (optional)
     content_frame.bind('<Enter>', lambda e: root.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units")))
