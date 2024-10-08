@@ -42,8 +42,8 @@ def create_accounts_screen(root, controller):
     def on_create_account():
         create_account(
             name_entry.get(),
-            gender_combobox.get(),  # Get selected gender from the combobox
-            birthdate_entry.get(),  # Get selected birthdate
+            gender_combobox.get(),
+            birthdate_entry.get(),
             phone_entry.get(),
             address_entry.get(),
             email_entry.get(),

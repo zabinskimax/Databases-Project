@@ -1,4 +1,5 @@
 from datetime import datetime
+from tkinter import messagebox
 
 from sqlalchemy import text
 from app.database.database import get_engine
@@ -21,12 +22,12 @@ def log_in(email, password):
 
     if not user:
         # User not found, login failed
-        print("Invalid email or password.")
+        messagebox.showerror("Error", "Invalid email or password.")
         return
 
     # Verify password using bcrypt
     if not verify_password(user.Password, password):
-        print("Invalid email or password.")
+        messagebox.showerror("Error", "Invalid email or password.")
         return
         # Login successful
     print(f"User {user} logged in successfully!")
@@ -36,23 +37,23 @@ def log_in(email, password):
 def create_account(name, gender, birthdate, phone, address, email, password, number_of_orders):
     # Basic validation
     if not name or not gender or not birthdate or not email or not password:
-        print("All required fields must be filled.")
+        messagebox.showerror("Error", "All required fields must be filled.")
         return
 
     if gender not in ['male', 'female', 'other']:
-        print("Invalid gender.")
+        messagebox.showerror("Error", "Invalid gender.")
         return
 
     try:
         datetime.strptime(birthdate, '%Y-%m-%d')  # Validate birthdate format
     except ValueError:
-        print("Invalid birthdate format. Use YYYY-MM-DD.")
+        messagebox.showerror("Error", "Invalid birthdate format. Use YYYY-MM-DD.")
         return
 
     try:
         number_of_orders = int(number_of_orders)
     except ValueError:
-        print("Number of orders must be an integer.")
+        messagebox.showerror("Error", "Number of orders must be an integer.")
         return
 
     check_email_query = text('''
@@ -63,7 +64,7 @@ def create_account(name, gender, birthdate, phone, address, email, password, num
         exists = result.fetchone()
 
     if exists:
-        print("Email address already exists. Please choose a different email.")
+        messagebox.showerror("Error", "Email address already exists. Please choose a different email.")
         return
 
     hashed_password = hash_password(password)
