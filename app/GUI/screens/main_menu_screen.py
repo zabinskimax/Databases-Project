@@ -4,7 +4,7 @@ from tkinter import messagebox
 
 from app.GUI.gui_utils import clear_screen
 from app.database.queries import get_pizza_types, get_drink_types, get_desserts_types, get_ingredient_details, \
-     check_if_birthday, get_pizza_ingredients, check_price_with_details
+    check_if_birthday, get_pizza_ingredients, check_price_with_details, check_if_admin
 
 # Track if the free pizza and drink have been applied
 free_pizza_applied = tk.BooleanVar(value=False)
@@ -207,5 +207,8 @@ def main_menu_screen(root, controller):
     # Back button
     back_button = tk.Button(button_frame, text="Back", command=lambda: controller.show_login_screen())
     back_button.pack(side="left", padx=5)
+    if check_if_admin():
+        button3 = tk.Button(root, text="Financial overview", command=lambda: controller.show_financial_overview_screen())
+        button3.pack(pady=10)
 
 

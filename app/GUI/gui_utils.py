@@ -8,11 +8,10 @@ def clear_screen(root):
     for widget in root.winfo_children():
         widget.pack_forget()
 
-def confirm_order(root, controller, order_details, total_price, delivery_postal_code, delivery_address, payment_method):
+def confirm_order(root, controller, order_details, total_price, delivery_postal_code, delivery_address, payment_method, discount):
     # Prepare the data for insertion
     takeaway = 1  # Assuming all orders are takeaway for now
     order_status = 'Preparing'  # Initial status
-    discount = 0  # Assuming no discount for now
     payed = 0  # Assuming not paid yet
 
 

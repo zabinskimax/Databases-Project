@@ -320,3 +320,23 @@ def check_if_birthday():
         print(order_count)
         # If the customer has already placed an order today, return False
         return order_count == 0
+
+
+def check_if_admin():
+    customer_id = get_customer_id()  # Assuming this function retrieves the current customer's ID
+
+    # SQL query to check if the customer is an admin
+    query = text('''
+        SELECT isAdmin
+        FROM Customer
+        WHERE CustomerID = :customer_id
+    ''')
+
+    with engine.connect() as connection:
+        # Execute the query to get the isAdmin value for the customer
+        result = connection.execute(query, {'customer_id': customer_id})
+        admin_status = result.scalar()
+
+        # Check if the admin status is True (1)
+        return bool(admin_status)  # Returns True if isAdmin is 1, otherwise False
+

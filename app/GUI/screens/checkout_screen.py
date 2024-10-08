@@ -170,7 +170,7 @@ def checkout_screen(root, order_details, controller):
         if confirmed_discount_code:
             update_discount_usage(discount_id)
         confirm_order(root, controller, order_details, total_price - ten_orders_discount - code_discount,
-                      postal_code_entry.get(), address_entry.get(), payment_var.get())
+                      postal_code_entry.get(), address_entry.get(), payment_var.get(), ten_orders_discount+code_discount)
 
     def get_numeric_postal_code():
         # Extract only the digits from the postal code entry
