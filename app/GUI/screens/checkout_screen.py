@@ -14,6 +14,7 @@ def checkout_screen(root, order_details, controller):
     has_pizza = any(item['category'] == 'Pizza' for item in order_details)
     confirmed_discount_code = None
     code_discount = 0
+    birthday = 0
     discount_id = None
     def apply_discount_and_update_total():
         nonlocal discount_label  # Allows modifying the discount_label variable from the parent scope
@@ -130,6 +131,8 @@ def checkout_screen(root, order_details, controller):
     scrollbar.pack(side="right", fill="y")
     ten_orders_discount = 0
     if check_if_birthday():
+        print('yes')
+        birthday = 1
         ten_orders_discount += calculate_discount(total_price)
 
     discount_label = None
@@ -179,4 +182,6 @@ def checkout_screen(root, order_details, controller):
 def calculate_discount(total_price):
     if check_if_discount():
         return total_price * 0.1
+    if check_if_birthday():
+        return total_price
     return 0
