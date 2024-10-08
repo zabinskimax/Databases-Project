@@ -340,3 +340,77 @@ def check_if_admin():
         # Check if the admin status is True (1)
         return bool(admin_status)  # Returns True if isAdmin is 1, otherwise False
 
+
+def fetch_orders():
+    """
+    Fetch orders that are currently in 'Preparing' status.
+    """
+    query = text('''
+        SELECT o.OrderID, o.CustomerID, o.TotalAmount, od.order_time, od.delivery_address
+        FROM Orders o
+        JOIN OrderDeliveries od ON o.OrderID = od.order_id
+        WHERE o.OrderStatus = 'Preparing'
+        ORDER BY od.order_time DESC
+    ''')
+
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        return result.fetchall()
+
+
+
+def update_order_status():
+    """
+    This function checks all orders with status 'Preparing',
+    and updates their status based on the time elapsed since the order_time.
+    - If more than 3 minutes have passed, change status to 'Out for Delivery'.
+    - If more than 30 minutes have passed, change status to 'Done'.
+    """
+
+    # SQL query to fetch order details where the status is 'Preparing'
+    query_fetch_preparing_orders = text('''
+        SELECT o.OrderID, od.order_time
+        FROM Orders o
+        JOIN OrderDeliveries od ON o.OrderID = od.order_id
+        WHERE o.OrderStatus = 'Preparing'
+    ''')
+
+    # SQL query to update the order status to 'Out for Delivery'
+    query_update_to_out_for_delivery = text('''
+        UPDATE Orders
+        SET OrderStatus = 'Out for Delivery'
+        WHERE OrderID = :order_id
+    ''')
+
+    # SQL query to update the order status to 'Done'
+    query_update_to_done = text('''
+        UPDATE Orders
+        SET OrderStatus = 'Done'
+        WHERE OrderID = :order_id
+    ''')
+
+    # Get the current time to compare with the order_time
+    now = datetime.now()
+
+    with engine.connect() as connection:
+        # Fetch all orders with 'Preparing' status
+        orders = connection.execute(query_fetch_preparing_orders).fetchall()
+
+        # Loop through the fetched orders
+        for order in orders:
+            order_id = order[0]
+            order_time = order[1]
+
+            # Calculate the time difference between now and the order time
+            time_diff = now - order_time
+
+            # If more than 3 minutes but less than 30 minutes have passed, update status to 'Out for Delivery'
+            if timedelta(minutes=3) <= time_diff < timedelta(minutes=30):
+                connection.execute(query_update_to_out_for_delivery, {'order_id': order_id})
+                print(f"Order {order_id} updated to 'Out for Delivery'")
+
+            # If more than 30 minutes have passed, update status to 'Done'
+            elif time_diff >= timedelta(minutes=30):
+                connection.execute(query_update_to_done, {'order_id': order_id})
+                print(f"Order {order_id} updated to 'Done'")
+        connection.commit()

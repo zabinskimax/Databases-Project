@@ -1,4 +1,6 @@
 # app/gui/gui_controller.py
+from app.GUI.screens.real_time_display import real_time_display
+
 
 class AppController:
     def __init__(self, root):
@@ -39,3 +41,7 @@ class AppController:
     def show_financial_overview_screen(self):
         from app.GUI.screens.financial_overview_screen import financial_overview_screen
         financial_overview_screen(self.root, self)
+
+    def show_real_time_display(self):
+        from app.GUI.screens.real_time_display import real_time_display
+        real_time_display(self.root, self)

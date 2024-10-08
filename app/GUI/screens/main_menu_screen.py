@@ -210,5 +210,6 @@ def main_menu_screen(root, controller):
     if check_if_admin():
         button3 = tk.Button(root, text="Financial overview", command=lambda: controller.show_financial_overview_screen())
         button3.pack(pady=10)
-
+        button4 = tk.Button(root, text="Real-time display of pizzas", command=lambda: controller.show_real_time_display())
+        button4.pack(pady=10)
 

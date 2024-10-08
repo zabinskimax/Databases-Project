@@ -6,7 +6,7 @@ from app.database.account_management import get_customer_id
 from app.database.database import get_engine
 from app.database.delivery_management import assign_delivery_to_grouped_orders
 from app.database.discount_management import add_an_order_to_order_sum
-from app.database.queries import get_pizza_id, get_drink_id, get_dessert_id
+from app.database.queries import get_pizza_id, get_drink_id, get_dessert_id, update_order_status
 
 engine = get_engine()
 
@@ -105,22 +105,17 @@ def cancel_latest_order():
             return "No orders found for this customer."
 
         order_id = order.order_id
-        cancellable_until = order.cancellable_until + timedelta(hours=2)
+        cancellable_until = order.cancellable_until
         order_status = order.OrderStatus
 
         current_time = datetime.now()
         if current_time > cancellable_until:
             return "Cancellation period has expired."
 
-        if order_status not in ['Being Prepared', 'Ready for Pickup']:
+        if order_status not in ['Preparing']:
             return "Order cannot be canceled as it is already being delivered or completed."
 
-        # Cancel the order
-        cancel_query = text('''
-            UPDATE OrderDeliveries
-            SET cancellation_status = 1
-            WHERE order_id = :order_id
-        ''')
+
 
         order_status_update_query = text('''
             UPDATE Orders
@@ -128,15 +123,14 @@ def cancel_latest_order():
             WHERE OrderID = :order_id
         ''')
 
-        # No need to start a new transaction if already in one
-        connection.execute(cancel_query, {'order_id': order_id})
         connection.execute(order_status_update_query, {'order_id': order_id})
-
+        connection.commit()
         return "Your order has been successfully canceled."
 
 
 def check_latest_order_status():
     customer_id = get_customer_id()
+    update_order_status()
     query = text('''
             SELECT od.order_id, od.order_time, od.cancellable_until, od.delivery_postal_code, od.delivery_person_id, o.OrderStatus
             FROM OrderDeliveries od
@@ -203,9 +197,9 @@ def check_latest_order_status():
 
                 if delivery_person:
                     delivery_person_name = delivery_person.driver_name
-
+        connection.commit()
         return (f"Order ID: {order_id}\n"
                 f"Order Status: {order_status}\n"  # Corrected variable name
                 f"Order Time: {order_time}\n"
                 f"Cancelable Until: {cancellable_until}\n"
-                f"Delivery Person: {delivery_person_name}")
+                f"Delivery Person: {delivery_person_id}")
